@@ -1,0 +1,69 @@
+# Azure Cosmos DB Configuration Template
+# Replace placeholder values with your actual configuration
+
+cosmos:
+  # Azure Cosmos DB endpoint URL
+  endpoint: ""
+
+  # Primary key for authentication
+  key: ""
+
+  # Database name
+  database_name: "SensorDatabase"
+
+  # Container name for sensor data
+  container_name: "SensorReadings"
+
+  # Partition key path (must include the leading slash)
+  partition_key: "/city"
+
+  # Connection settings
+  connection:
+    # Connection mode: "Gateway" or "Direct"
+    mode: "Gateway"
+
+    # Maximum number of retry attempts for operations
+    max_retry_attempts: 9
+
+    # Maximum retry wait time in seconds
+    max_retry_wait_time_in_seconds: 30
+
+    # Connection timeout in seconds
+    connection_timeout: 60
+
+    # Whether to enable endpoint discovery for multi-region accounts
+    enable_endpoint_discovery: true
+
+# Cities configuration
+cities:
+  - name: Amsterdam
+    latitude: 52.373080
+    longitude: 4.892453
+  - name: Berlin
+    latitude: 52.510885
+    longitude: 13.398937
+  - name: London
+    latitude: 51.507446
+    longitude: -0.127765
+  - name: New York
+    latitude: 40.712728
+    longitude: -74.006015
+  - name: Tokyo
+    latitude: 35.676860
+    longitude: 139.763895
+
+# Performance settings
+performance:
+  # Initial throughput in Request Units per second (RU/s)
+  throughput: 10000
+
+  # Whether to use autoscale throughput
+  autoscale: true
+
+  # Batch size for bulk operations
+  batch_size: 1000
+
+# Logging settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"

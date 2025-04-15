@@ -1,0 +1,18 @@
+# Include node_modules in .dockerignore
+node_modules
+npm-debug.log
+.next
+out
+build
+.git
+.gitignore
+README.md
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Include .env.example for documentation purposes
+!.env.example

@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server"
 import { CosmosClient } from "@azure/cosmos"
-
-// CosmosDB connection configuration
-const endpoint = process.env.COSMOS_ENDPOINT || ""
-const key = process.env.COSMOS_KEY || ""
-const databaseId = process.env.COSMOS_DATABASE_ID || "SensorDatabase"
-const containerId = process.env.COSMOS_CONTAINER_ID || "SensorReadings"
+import { getCosmosConfig } from "@/lib/config"
 
 // Initialize the Cosmos client
 let client: CosmosClient | null = null
@@ -15,15 +10,16 @@ let container: any = null
 // Initialize the client only once
 function getCosmosClient() {
   if (!client) {
-    console.log("Initializing CosmosDB client with endpoint:", endpoint)
+    const config = getCosmosConfig()
+    console.log("Initializing CosmosDB client with endpoint:", config.endpoint)
 
-    if (!endpoint || !key) {
+    if (!config.endpoint || !config.key) {
       throw new Error("CosmosDB endpoint or key is missing")
     }
 
-    client = new CosmosClient({ endpoint, key })
-    database = client.database(databaseId)
-    container = database.container(containerId)
+    client = new CosmosClient({ endpoint: config.endpoint, key: config.key })
+    database = client.database(config.databaseId)
+    container = database.container(config.containerId)
   }
   return { client, database, container }
 }
