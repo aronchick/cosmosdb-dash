@@ -16,7 +16,7 @@ import {
   Legend,
 } from "recharts"
 
-const TIME_WINDOW_MS = 20 * 60 * 1000
+const TIME_WINDOW_MS = 60 * 60 * 1000
 
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")

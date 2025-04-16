@@ -6,6 +6,7 @@ import SensorScatterChart from "@/components/sensor-scatter-chart"
 import SensorStats from "@/components/sensor-stats"
 import SensorTable from "@/components/sensor-table"
 import CitySelector from "@/components/city-selector"
+import CitySensors from "@/components/city-sensors"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertCircle, CheckCircle2, Trash2, Database } from "lucide-react"
@@ -313,9 +314,10 @@ export default function Dashboard() {
 
       {/* Main Dashboard Content */}
       <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14 text-xl">
+        <TabsList className="grid w-full grid-cols-4 h-14 text-xl">
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="sensors">Sensors</TabsTrigger>
           <TabsTrigger value="table">Raw Data</TabsTrigger>
         </TabsList>
 
@@ -327,6 +329,12 @@ export default function Dashboard() {
 
         <TabsContent value="stats" className="mt-6">
           <SensorStats
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+          />
+        </TabsContent>
+        
+        <TabsContent value="sensors" className="mt-6">
+          <CitySensors
             data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
           />
         </TabsContent>
