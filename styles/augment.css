@@ -1,0 +1,19 @@
+nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+nav h1{
+    font-size: 2em !important;
+}
+
+.flex-center{
+    display: flex;
+    align-items: center;
+}
+
+.space-between{
+    display: flex;
+    justify-content: space-between;
+}

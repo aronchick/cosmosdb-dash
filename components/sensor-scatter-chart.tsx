@@ -16,18 +16,16 @@ import {
   Legend,
 } from "recharts"
 
-// Define the time window in milliseconds (e.g., 30 minutes)
-const TIME_WINDOW_MS = 30 * 60 * 1000
+const TIME_WINDOW_MS = 20 * 60 * 1000
 
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
   const [timeWindow, setTimeWindow] = useState<[number, number]>([Date.now() - TIME_WINDOW_MS, Date.now()])
   const animationFrameRef = useRef<number | null>(null)
 
-  // Format data for scatter chart
   const chartData = useMemo(() => {
     return data.map((reading) => ({
-      timestamp: new Date(reading.timestamp).getTime(), // Convert to timestamp for X-axis
+      timestamp: new Date(reading.timestamp).getTime(),
       temperature: reading.temperature,
       humidity: reading.humidity,
       pressure: reading.pressure,
@@ -38,25 +36,20 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     }))
   }, [data])
 
-  // Filter data to only show points within the current time window
   const visibleData = useMemo(() => {
     const [startTime, endTime] = timeWindow
     return chartData.filter((point) => point.timestamp >= startTime && point.timestamp <= endTime)
   }, [chartData, timeWindow])
 
-  // Update the time window to slide as time passes
   useEffect(() => {
-    // Function to update the time window
     const updateTimeWindow = () => {
       const now = Date.now()
       setTimeWindow([now - TIME_WINDOW_MS, now])
       animationFrameRef.current = requestAnimationFrame(updateTimeWindow)
     }
 
-    // Start the animation
     animationFrameRef.current = requestAnimationFrame(updateTimeWindow)
 
-    // Clean up on unmount
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
@@ -64,23 +57,28 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     }
   }, [])
 
-  // Get unit and label based on metric
   const getMetricInfo = (metric: string) => {
     switch (metric) {
       case "temperature":
-        return { unit: "°F", label: "Temperature", range: [50, 90] }
+        return { unit: "°F", label: "Temperature" }
       case "humidity":
-        return { unit: "%", label: "Humidity", range: [0, 100] }
+        return { unit: "%", label: "Humidity" }
       case "pressure":
-        return { unit: "hPa", label: "Pressure", range: [8, 16] }
+        return { unit: "hPa", label: "Pressure" }
       default:
-        return { unit: "", label: "", range: [0, 100] }
+        return { unit: "", label: "" }
     }
   }
 
-  const { unit, label, range } = getMetricInfo(metric)
+  const { unit, label } = getMetricInfo(metric)
 
-  // Custom tooltip component with enhanced information
+  // Dynamically calculate Y-axis range
+  const metricValues = visibleData.map((d) => d[metric]).filter((v) => typeof v === "number" && !isNaN(v))
+  const min = metricValues.length ? Math.min(...metricValues) : 0
+  const max = metricValues.length ? Math.max(...metricValues) : 1
+  const padding = (max - min) * 0.1 || 5
+  const range: [number, number] = [min - padding, max + padding]
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
@@ -97,22 +95,22 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     return null
   }
 
-  // Generate a distinct color for each city - using a more vibrant color palette
   const cityColors: Record<string, string> = {
-    Amsterdam: "#FF6384", // Bright pink
-    Berlin: "#36A2EB", // Bright blue
-    London: "#FFCE56", // Bright yellow
-    "New York": "#4BC0C0", // Teal
-    Tokyo: "#9966FF", // Purple
-    Paris: "#FF9F40", // Orange
-    Sydney: "#32CD32", // Lime green
-    Dubai: "#FF5733", // Bright orange-red
-    "San Francisco": "#8A2BE2", // Blue violet
-    Singapore: "#00FFFF", // Cyan
-    Default: "#FF00FF", // Magenta
+    Amsterdam: "#FFFF00",
+    Beijing: "#00FF00",
+    Berlin: "#36A2EB",
+    London: "#FFCE56",
+    Cairo : "#FF0000",
+    "New York": "#4BC0C0",
+    Tokyo: "#9966FF",
+    Paris: "#FF9F40",
+    Sydney: "#32CD32",
+    Dubai: "#FF5733",
+    "San Francisco": "#8A2BE2",
+    Singapore: "#00FFFF",
+    Default: "#FF00FF",
   }
 
-  // Group data by city for multiple scatter series
   const cityData = useMemo(() => {
     const cities = Array.from(new Set(data.map((reading) => reading.city)))
     return cities.map((city) => ({
@@ -161,7 +159,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
               <YAxis
                 dataKey={metric}
                 name={label}
-                domain={range}
+                domain={["auto", "auto"]}
                 stroke="#fff"
                 tick={{ fill: "#fff", fontSize: 16 }}
                 label={{
@@ -174,7 +172,6 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
               <ZAxis range={[60, 60]} />
               <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "3 3" }} />
               <Legend formatter={(value) => <span style={{ color: "#fff", fontSize: "16px" }}>{value}</span>} />
-
               {cityData.map(({ city, data }) => (
                 <Scatter
                   key={city}
@@ -183,7 +180,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
                   fill={cityColors[city] || cityColors.Default}
                   shape="circle"
                   legendType="circle"
-                  isAnimationActive={false} // Disable built-in animations for smoother sliding
+                  isAnimationActive={false}
                 />
               ))}
             </ScatterChart>

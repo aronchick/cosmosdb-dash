@@ -230,7 +230,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Status Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-gray-900 border-gray-800 flex-center">
           <CardContent className="p-4 flex items-center">
             {connectionStatus === "connected" ? (
               <CheckCircle2 className="h-8 w-8 text-green-500 mr-3" />
@@ -246,7 +246,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-gray-900 border-gray-800 flex-center">
           <CardContent className="p-4">
             <h3 className="text-2xl font-bold">Data Rate</h3>
             <p className="text-xl">{dataRate.toFixed(0)} readings/sec</p>
@@ -254,7 +254,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-gray-900 border-gray-800 flex-center">
           <CardContent className="p-4 flex items-center">
             <Database className="h-8 w-8 text-blue-500 mr-3" />
             <div>
@@ -266,7 +266,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-gray-900 border-gray-800 flex-center space-between">
           <CardContent className="p-4 flex items-center justify-between">
             <h3 className="text-2xl font-bold">Actions</h3>
             <AlertDialog>
