@@ -6,9 +6,11 @@ import { Loader2 } from "lucide-react"
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-4xl md:text-6xl font-bold mb-6 text-center">
-        High-Scale Data Processing with Azure Cosmos DB
-      </h1>
+      <nav>
+        <h1 className="text-4xl md:text-6xl font-bold mb-6 text-center">
+          High-Scale Data Processing with Azure Cosmos DB
+        </h1>
+      </nav>
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-[80vh]">
