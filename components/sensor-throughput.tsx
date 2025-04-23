@@ -16,18 +16,15 @@ const FIVE_MIN_MS = 5 * 60 * 1000
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   const groupedData = useMemo(() => {
-    const now = Date.now()
-    const start = now - FIVE_MIN_MS
+    const now = new Date()
+    now.setSeconds(0, 0) // Snap to start of current minute
+    const cutoff = now.getTime() - FIVE_MIN_MS
 
     const grouped: Record<string, Record<string, SensorReading[]>> = {}
 
-    console.log("data:", data);
-
     data.forEach((reading) => {
       const timestamp = new Date(reading.timestamp).getTime()
-      if (timestamp < start) {
-        return
-      }
+      if (timestamp < cutoff || timestamp >= now.getTime()) return
 
       const city = reading.city
       const sensor = reading.sensorId
@@ -35,14 +32,13 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       if (!grouped[city]) grouped[city] = {}
       if (!grouped[city][sensor]) grouped[city][sensor] = []
       grouped[city][sensor].push(reading)
-    });
+    })
 
     return grouped
   }, [data])
 
   const calculateByteSize = (reading: SensorReading) => {
-    const json = JSON.stringify(reading)
-    return new Blob([json]).size // returns bytes
+    return new Blob([JSON.stringify(reading)]).size
   }
 
   const getThroughputSeries = (readings: SensorReading[]) => {
@@ -51,7 +47,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
     readings.forEach((r) => {
       const time = new Date(r.timestamp)
-      time.setSeconds(0, 0)
+      time.setSeconds(0, 0) // Bucket per minute
       const bucket = time.toISOString()
 
       countBuckets[bucket] = (countBuckets[bucket] || 0) + 1
@@ -68,7 +64,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
   return (
     <div>
-      <h2 className="text-3xl mb-4">Sensor Throughput (Last 5 mins)</h2>
+      <h2 className="text-3xl mb-4">Sensor Throughput (Last 5 Complete Minutes)</h2>
       {Object.entries(groupedData).map(([city, sensors]) => (
         <div key={city} className="mb-10">
           <h3 className="text-2xl font-bold mb-4">{city}</h3>
@@ -100,9 +96,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                           <YAxis hide />
                           <Tooltip
                             contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                            labelFormatter={(value) =>
-                              new Date(value).toLocaleTimeString()
-                            }
+                            labelFormatter={(value) => new Date(value).toLocaleTimeString()}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -119,9 +113,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                           <YAxis hide />
                           <Tooltip
                             contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                            labelFormatter={(value) =>
-                              new Date(value).toLocaleTimeString()
-                            }
+                            labelFormatter={(value) => new Date(value).toLocaleTimeString()}
                             formatter={(value: number) => [`${value.toFixed(2)} KB/s`, "Rate"]}
                           />
                         </LineChart>
