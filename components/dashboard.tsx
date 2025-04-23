@@ -72,6 +72,20 @@ export default function Dashboard() {
     }
   }
 
+  function simpleHash(obj: Record<string, any>): string {
+    const str = JSON.stringify(
+      Object.keys(obj).sort().reduce((acc: any, key) => {
+        acc[key] = obj[key]
+        return acc
+      }, {})
+    )
+    let hash = 5381
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 33) ^ str.charCodeAt(i)
+    }
+    return (hash >>> 0).toString(16)
+  } 
+
   // Function to fetch batched data for all sensors
   const fetchBatchedData = async () => {
     try {
@@ -115,9 +129,14 @@ export default function Dashboard() {
 
         // Append new data without blocking
         setSensorData((prevData) => {
-          // Keep only the last 5000 readings to maintain performance
-          const combinedData = [...prevData, ...result.data]
-          return combinedData.slice(Math.max(0, combinedData.length - 5000))
+          const seen = new Set<string>()
+          const combined = [...prevData, ...result.data].filter((item) => {
+            const hash = simpleHash(item)
+            if (seen.has(hash)) return false
+            seen.add(hash)
+            return true
+          })
+          return combined
         })
       }
 
