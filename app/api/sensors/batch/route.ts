@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
     // Build a single query that gets all data since the earliest timestamp
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.timestamp > @timestamp ORDER BY c.timestamp ASC OFFSET 0 LIMIT 1000",
+      query: "SELECT * FROM c WHERE c.timestamp > @timestamp ORDER BY c.timestamp DESC",
       parameters: [
         {
           name: "@timestamp",
@@ -75,14 +75,18 @@ export async function GET(request: Request) {
     console.log(`Found ${results.length} results in batched query`)
 
     // Filter the results client-side to only include data newer than each sensor/city's last timestamp
-    const filteredResults = results.filter((reading: any) => {
-      const key = `${reading.sensorId}:${reading.city}`
-      const lastTimestamp = lastTimestamps[key]
+    const filteredResults = results
+      .filter((reading: any) => {
+        const key = `${reading.sensorId}:${reading.city}`
+        const lastTimestamp = lastTimestamps[key]
 
-      // Include the reading if we don't have a timestamp for this combination
-      // or if the reading is newer than the last timestamp
-      return !lastTimestamp || reading.timestamp > lastTimestamp
-    })
+        // Include the reading if we don't have a timestamp for this combination
+        // or if the reading is newer than the last timestamp
+        return !lastTimestamp || reading.timestamp > lastTimestamp
+      })
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // Sort descending
+      // .slice(0, 7500) // Keep only the first 500 readings
+    ;
 
     console.log(`Filtered to ${filteredResults.length} new readings`)
 
