@@ -37,6 +37,7 @@ export type SensorReading = {
 
 export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
+  const lastTimestampsRef = useRef<Record<string, string>>({});
   const [lastTimestamps, setLastTimestamps] = useState<Record<string, string>>({})
   const [selectedCity, setSelectedCity] = useState<string>("All Cities")
   const [isLoading, setIsLoading] = useState(false)
@@ -71,6 +72,20 @@ export default function Dashboard() {
     }
   }
 
+  function simpleHash(obj: Record<string, any>): string {
+    const str = JSON.stringify(
+      Object.keys(obj).sort().reduce((acc: any, key) => {
+        acc[key] = obj[key]
+        return acc
+      }, {})
+    )
+    let hash = 5381
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 33) ^ str.charCodeAt(i)
+    }
+    return (hash >>> 0).toString(16)
+  } 
+
   // Function to fetch batched data for all sensors
   const fetchBatchedData = async () => {
     try {
@@ -79,7 +94,9 @@ export default function Dashboard() {
 
       console.log("Executing batched query for all sensors and cities...")
 
-      const result = await fetchBatchedSensorData(lastTimestamps)
+      const result = await fetchBatchedSensorData(lastTimestampsRef.current);
+
+      console.log("Server returned result:", result);
 
       if (result.data && result.data.length > 0) {
         // Update last timestamps for each sensor/city combination
@@ -103,16 +120,23 @@ export default function Dashboard() {
           newTimestamps[key] = readings[0].timestamp
         })
 
-        setLastTimestamps(newTimestamps)
+        console.log("New timestamps being set:", newTimestamps);
+        setLastTimestamps(newTimestamps);
+        lastTimestampsRef.current = newTimestamps;
 
         // Update data rate
         readingsCountRef.current += result.data.length
 
         // Append new data without blocking
         setSensorData((prevData) => {
-          // Keep only the last 5000 readings to maintain performance
-          const combinedData = [...prevData, ...result.data]
-          return combinedData.slice(Math.max(0, combinedData.length - 5000))
+          const seen = new Set<string>()
+          const combined = [...prevData, ...result.data].filter((item) => {
+            const hash = simpleHash(item)
+            if (seen.has(hash)) return false
+            seen.add(hash)
+            return true
+          })
+          return combined
         })
       }
 
@@ -211,7 +235,7 @@ export default function Dashboard() {
     fetchBatchedData()
 
     // Set up batched query every 5 seconds
-    batchQueryTimerRef.current = setInterval(fetchBatchedData, 5000)
+    batchQueryTimerRef.current = setInterval(fetchBatchedData, 1000)
 
     // Set up metadata refresh every minute
     metadataTimerRef.current = setInterval(fetchMetadataInfo, 60000)
