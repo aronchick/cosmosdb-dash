@@ -37,6 +37,7 @@ export type SensorReading = {
 
 export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
+  const lastTimestampsRef = useRef<Record<string, string>>({});
   const [lastTimestamps, setLastTimestamps] = useState<Record<string, string>>({})
   const [selectedCity, setSelectedCity] = useState<string>("All Cities")
   const [isLoading, setIsLoading] = useState(false)
@@ -79,7 +80,9 @@ export default function Dashboard() {
 
       console.log("Executing batched query for all sensors and cities...")
 
-      const result = await fetchBatchedSensorData(lastTimestamps)
+      const result = await fetchBatchedSensorData(lastTimestampsRef.current);
+
+      console.log("Server returned result:", result);
 
       if (result.data && result.data.length > 0) {
         // Update last timestamps for each sensor/city combination
@@ -103,7 +106,9 @@ export default function Dashboard() {
           newTimestamps[key] = readings[0].timestamp
         })
 
-        setLastTimestamps(newTimestamps)
+        console.log("New timestamps being set:", newTimestamps);
+        setLastTimestamps(newTimestamps);
+        lastTimestampsRef.current = newTimestamps;
 
         // Update data rate
         readingsCountRef.current += result.data.length
@@ -211,7 +216,7 @@ export default function Dashboard() {
     fetchBatchedData()
 
     // Set up batched query every 5 seconds
-    batchQueryTimerRef.current = setInterval(fetchBatchedData, 5000)
+    batchQueryTimerRef.current = setInterval(fetchBatchedData, 1000)
 
     // Set up metadata refresh every minute
     metadataTimerRef.current = setInterval(fetchMetadataInfo, 60000)

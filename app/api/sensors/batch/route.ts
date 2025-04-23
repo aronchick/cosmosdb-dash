@@ -29,10 +29,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const timestampsParam = searchParams.get("timestamps") || "{}"
 
+    console.log("Raw timestampsParam:", timestampsParam);
+
     // Parse the timestamps JSON
     let lastTimestamps: Record<string, string> = {}
     try {
-      lastTimestamps = JSON.parse(decodeURIComponent(timestampsParam))
+      lastTimestamps = JSON.parse(timestampsParam);
     } catch (e) {
       console.error("Error parsing timestamps:", e)
     }
