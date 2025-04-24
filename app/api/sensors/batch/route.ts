@@ -62,18 +62,19 @@ export async function GET(request: Request) {
 
     // Build a single query that gets all data since the earliest timestamp
     // Calculate one hour ago from now
-    const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString()
+    const mins = 10
+    const allotedTimeWindow = new Date(Date.now() - mins * 60 * 1000).toISOString()
 
     const querySpec = {
       query: `
         SELECT * FROM c 
         WHERE c.timestamp > @earliestTimestamp 
-          AND c.timestamp > @twentyMinutesAgo
+          AND c.timestamp > @allotedTimeWindow
         ORDER BY c.timestamp DESC
       `,
       parameters: [
         { name: "@earliestTimestamp", value: earliestTimestamp },
-        { name: "@twentyMinutesAgo", value: twentyMinutesAgo },
+        { name: "@allotedTimeWindow", value: allotedTimeWindow },
       ],
     }
 

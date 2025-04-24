@@ -116,7 +116,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
           bgcolor: "#000000",
           bordercolor: markerColor,
           font: { color: "#ffffff" },
-          padding: 0
+          padding: 20
         },
         showlegend: true
       }

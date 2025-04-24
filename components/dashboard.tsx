@@ -50,6 +50,7 @@ export type SensorReading = {
 
 
 export default function Dashboard() {
+  const isFetchingRef = useRef(false)
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
   const lastTimestampsRef = useRef<Record<string, string>>({});
   const [lastTimestamps, setLastTimestamps] = useState<Record<string, string>>({})
@@ -102,46 +103,39 @@ export default function Dashboard() {
 
   // Function to fetch batched data for all sensors
   const fetchBatchedData = async () => {
+    if (isFetchingRef.current) {
+      console.log("Fetch in progress — skipping this cycle.")
+      return
+    }
+  
+    isFetchingRef.current = true
     try {
       setIsLoading(true)
       setQueryCount((prev) => prev + 1)
-
+  
       console.log("Executing batched query for all sensors and cities...")
-
-      const result = await fetchBatchedSensorData(lastTimestampsRef.current);
-
-      console.log("Server returned result:", result);
-
+      const result = await fetchBatchedSensorData(lastTimestampsRef.current)
+      console.log("Server returned result:", result)
+  
       if (result.data && result.data.length > 0) {
-        // Update last timestamps for each sensor/city combination
         const newTimestamps: Record<string, string> = { ...lastTimestamps }
-
-        // Group the results by sensor/city
         const groupedResults: Record<string, SensorReading[]> = {}
-
+  
         result.data.forEach((reading: SensorReading) => {
           const key = `${reading.sensorId}:${reading.city}`
-          if (!groupedResults[key]) {
-            groupedResults[key] = []
-          }
+          if (!groupedResults[key]) groupedResults[key] = []
           groupedResults[key].push(reading)
         })
-
-        // Update the last timestamp for each group
+  
         Object.entries(groupedResults).forEach(([key, readings]) => {
-          // Sort by timestamp to ensure we get the latest
           readings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
           newTimestamps[key] = readings[0].timestamp
         })
-
-        console.log("New timestamps being set:", newTimestamps);
-        setLastTimestamps(newTimestamps);
-        lastTimestampsRef.current = newTimestamps;
-
-        // Update data rate
+  
+        setLastTimestamps(newTimestamps)
+        lastTimestampsRef.current = newTimestamps
         readingsCountRef.current += result.data.length
-
-        // Append new data without blocking
+  
         setSensorData((prevData) => {
           const seen = new Set<string>()
           const combined = [...prevData, ...result.data].filter((item) => {
@@ -153,22 +147,22 @@ export default function Dashboard() {
           return combined
         })
       }
-
+  
       setConnectionStatus("connected")
       setError(null)
     } catch (err: any) {
       console.error("Error fetching batched data:", err)
       setConnectionStatus("disconnected")
       setError(`Failed to fetch data: ${err.message || "Unknown error"}. Retrying...`)
-
-      // If we have no data at all, generate some mock data for demo purposes
       if (sensorData.length === 0) {
         generateMockData()
       }
     } finally {
+      isFetchingRef.current = false
       setIsLoading(false)
     }
   }
+  
 
   // Update data rate every second
   useEffect(() => {
