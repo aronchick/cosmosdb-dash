@@ -15,6 +15,7 @@ import {
 const FIVE_MIN_MS = 5 * 60 * 1000
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
+  // Initially null means division is off
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
 
   const groupedData = useMemo(() => {
@@ -90,6 +91,9 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     setDivisionToggleTime((prev) => (prev ? null : now))
   }
 
+  const isDivisionActive = !!divisionToggleTime
+  const adjustedMb = isDivisionActive ? (totalKb / 1000) / 60 : totalKb / 1000
+
   return (
     <div>
       <h2
@@ -97,9 +101,9 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         onClick={handleToggleDivision}
         title="Click to toggle divide-by-60 mode for all cities"
       >
-        Sensor Throughput (Prev. 5 Minutes)
+        Sensor Throughput
         <span className="text-lg text-white-800 font-normal ml-2">
-          ({(totalKb / 1000).toFixed(2)} MB)
+          ({adjustedMb.toFixed(2)} MB)
         </span>
       </h2>
 
