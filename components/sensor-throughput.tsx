@@ -64,7 +64,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
   return (
     <div>
-      <h2 className="text-3xl mb-4">Sensor Throughput (Last 5 Complete Minutes)</h2>
+      <h2 className="text-3xl mb-4">Sensor Throughput (Prev. 5 Minutes)</h2>
       {Object.entries(groupedData).map(([city, sensors]) => (
         <div key={city} className="mb-10">
           <h3 className="text-2xl font-bold mb-4">{city}</h3>
@@ -76,48 +76,55 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
               ).toLocaleTimeString()
 
               return (
-                <Card key={sensorId} className="bg-gray-900 border-gray-800">
+                <Card key={sensorId} className="bg-gray-900 border-gray-800 pb-5">
                   <CardHeader>
                     <CardTitle className="text-xl font-bold">{sensorId}</CardTitle>
                     <p className="text-sm text-gray-400">Last update: {latest}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4 h-24">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={series}>
-                          <Line
-                            type="monotone"
-                            dataKey="count"
-                            stroke="#4FD1C5"
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                          <XAxis dataKey="timestamp" hide />
-                          <YAxis hide />
-                          <Tooltip
-                            contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                            labelFormatter={(value) => new Date(value).toLocaleTimeString()}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={series}>
-                          <Line
-                            type="monotone"
-                            dataKey="kbps"
-                            stroke="#FBBF24"
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                          <XAxis dataKey="timestamp" hide />
-                          <YAxis hide />
-                          <Tooltip
-                            contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                            labelFormatter={(value) => new Date(value).toLocaleTimeString()}
-                            formatter={(value: number) => [`${value.toFixed(2)} KB/s`, "Rate"]}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="h-24">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={series}>
+                            <Line
+                              type="monotone"
+                              dataKey="count"
+                              stroke="#4FD1C5"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <XAxis dataKey="timestamp" hide />
+                            <YAxis hide />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
+                              labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                        <p className="text-center text-sm text-gray-400 mt-1">Items per second</p>
+                      </div>
+
+                      <div className="h-24">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={series}>
+                            <Line
+                              type="monotone"
+                              dataKey="kbps"
+                              stroke="#FBBF24"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <XAxis dataKey="timestamp" hide />
+                            <YAxis hide />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
+                              labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+                              formatter={(value: number) => [`${value.toFixed(2)} KB/s`, "Rate"]}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                        <p className="text-center text-sm text-gray-400 mt-1">KB/s</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
