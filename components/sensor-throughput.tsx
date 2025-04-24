@@ -102,7 +102,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         title="Click to toggle divide-by-60 mode for all cities"
       >
         Sensor Throughput
-        <span className="text-lg text-white-800 font-normal ml-2">
+        <span className="text-lg text-white-800 ml-2 font-bold">
           ({adjustedMb.toFixed(2)} MB)
         </span>
       </h2>
@@ -115,8 +115,8 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         return (
           <div key={city} className="mb-10">
             <h3 className="text-2xl font-bold mb-4">
-              {city}
-              <span className="text-gray-400 text-rg font-normal ml-2">
+              {city}<br/>
+              <span className="text-white-600 text-lg font-normal">
                 ({totalKbps.toFixed(2)} KB/s)
               </span>
             </h3>
