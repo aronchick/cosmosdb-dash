@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -15,9 +15,11 @@ import {
 const FIVE_MIN_MS = 5 * 60 * 1000
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
+  const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
+
   const groupedData = useMemo(() => {
     const now = new Date()
-    now.setSeconds(0, 0) // Snap to start of current minute
+    now.setSeconds(0, 0)
     const cutoff = now.getTime() - FIVE_MIN_MS
 
     const grouped: Record<string, Record<string, SensorReading[]>> = {}
@@ -38,8 +40,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   }, [data])
 
   const calculateByteSize = (reading: SensorReading) => {
-    const recordSize = new Blob([JSON.stringify(reading)]).size
-    return recordSize
+    return new Blob([JSON.stringify(reading)]).size
   }
 
   function formatUnixTime(unixTime: any) {
@@ -50,60 +51,74 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     return hours + ":" + minutes.substr(-2) + ":" + seconds.substr(-2)
   }
 
-  function generateAltThroughput(readings: SensorReading[]) {
+  function generateAltThroughput(readings: SensorReading[], divideAfter?: number) {
     const buckets: any = {}
+
     readings.forEach((entry) => {
       const time = new Date(entry.timestamp)
       const timeKey = (time.getTime() / 1000 | 0).toString()
-
-      if ((time.getTime() / 1000) < ((time.getTime() / 1000) - 300)) return
-
-      if (!buckets[timeKey]) {
-        buckets[timeKey] = []
-      }
-
+      if (!buckets[timeKey]) buckets[timeKey] = []
       buckets[timeKey].push(entry)
     })
 
     const timestamps = Object.keys(buckets).sort()
-    return timestamps.map((timestamp) => ({
-      timestamp,
-      count: buckets[timestamp].length,
-      kbps: calculateByteSize(buckets[timestamp]) / 1024
-    }))
+
+    return timestamps.map((timestamp) => {
+      const time = parseInt(timestamp)
+      const count = buckets[timestamp].length
+      const kbps = calculateByteSize(buckets[timestamp]) / 1024
+
+      const divided = divideAfter && time >= divideAfter
+      return {
+        timestamp,
+        count: divided ? count / 60 : count,
+        kbps: divided ? kbps / 60 : kbps,
+      }
+    })
   }
 
   const totalKb = useMemo(() => {
-    return Object.values(groupedData)
-      .flatMap((sensors) => Object.values(sensors))
-      .flatMap((readings) => generateAltThroughput(readings))
-      .reduce((sum, point) => sum + point.kbps, 0) * 5 * 60 // convert KB/s to total KB over 5 minutes
-  }, [groupedData])
+    return Object.entries(groupedData).flatMap(([city, sensors]) =>
+      Object.values(sensors).flatMap((readings) =>
+        generateAltThroughput(readings, divisionToggleTime)
+      )
+    ).reduce((sum, point) => sum + point.kbps, 0) * 5 * 60
+  }, [groupedData, divisionToggleTime])
+
+  const handleToggleDivision = () => {
+    const now = Math.floor(Date.now() / 1000)
+    setDivisionToggleTime((prev) => (prev ? null : now))
+  }
 
   return (
     <div>
-      <h2 className="text-3xl mb-4">
+      <h2
+        className="text-3xl mb-4"
+        onClick={handleToggleDivision}
+        title="Click to toggle divide-by-60 mode for all cities"
+      >
         Sensor Throughput (Prev. 5 Minutes)
-        <span className="text-lg text-gray-400 font-normal ml-2">
+        <span className="text-lg text-white-800 font-normal ml-2">
           ({(totalKb / 1000).toFixed(2)} MB)
         </span>
       </h2>
+
       {Object.entries(groupedData).map(([city, sensors]) => {
         const totalKbps = Object.values(sensors)
-          .flatMap((readings) => generateAltThroughput(readings))
+          .flatMap((readings) => generateAltThroughput(readings, divisionToggleTime))
           .reduce((sum, point) => sum + point.kbps, 0)
 
         return (
           <div key={city} className="mb-10">
             <h3 className="text-2xl font-bold mb-4">
-              {city}{" "}
-              <span className="text-gray-400 text-lg font-normal">
+              {city}
+              <span className="text-gray-400 text-rg font-normal ml-2">
                 ({totalKbps.toFixed(2)} KB/s)
               </span>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Object.entries(sensors).map(([sensorId, readings]) => {
-                const series = generateAltThroughput(readings)
+                const series = generateAltThroughput(readings, divisionToggleTime)
                 const latest = new Date(
                   Math.max(...readings.map((r) => new Date(r.timestamp).getTime()))
                 ).toLocaleTimeString()
@@ -136,7 +151,6 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                           </ResponsiveContainer>
                           <p className="text-center text-sm text-gray-400 mt-1">Items per second</p>
                         </div>
-
                         <div className="h-24">
                           <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={series}>
