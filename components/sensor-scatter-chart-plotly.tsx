@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { SensorReading } from "@/components/dashboard"
 
-const TIME_WINDOW_MS = 60 * 60 * 1000
+const TIME_WINDOW_MS = 5 * 60 * 1000
 
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
@@ -64,6 +64,8 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
         const temp = typeof d.temperature === "number" ? `${d.temperature.toFixed(2)} °F` : "N/A"
         const hum = typeof d.humidity === "number" ? `${d.humidity.toFixed(2)}%` : "N/A"
         const press = typeof d.pressure === "number" ? `${d.pressure.toFixed(2)} hPa` : "N/A"
+        const model = !!d.model ? `${d.model}` : "Unknown"
+        const firmwareVersion = !!d.firmwareVersion ? `${d.firmwareVersion}` : "Unknown"
       
         return `
           <b>${d.city}</b><br>
@@ -71,13 +73,18 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
           Time: ${new Date(d.timestamp).toLocaleString()}<br>
           Temp: ${temp}<br>
           Humidity: ${hum}<br>
-          Pressure: ${press}
+          Pressure: ${press}<br>
+          Model: ${model}<br>
+          Firmware: ${firmwareVersion}
         `
       }),      
       hoverinfo: "text",
       marker: {
         color: cityColors[city] || cityColors.Default,
-        size: 3
+        size: items.map((d) => d.anomalyFlag ? 8 : 3),
+        line: {
+            width: 0  // removes the border
+        }
       },
       showlegend: true
     }))
