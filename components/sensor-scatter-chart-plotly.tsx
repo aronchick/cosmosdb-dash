@@ -60,14 +60,20 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
       name: city,
       x: items.map((d) => new Date(d.timestamp)),
       y: items.map((d) => d[metric]),
-      text: items.map((d) => `
-        <b>${d.city}</b><br>
-        Sensor: ${d.sensorId}<br>
-        Time: ${new Date(d.timestamp).toLocaleString()}<br>
-        Temp: ${d.temperature.toFixed(2)} °F<br>
-        Humidity: ${d.humidity.toFixed(2)}%<br>
-        Pressure: ${d.pressure.toFixed(2)} hPa
-      `),
+      text: items.map((d) => {
+        const temp = typeof d.temperature === "number" ? `${d.temperature.toFixed(2)} °F` : "N/A"
+        const hum = typeof d.humidity === "number" ? `${d.humidity.toFixed(2)}%` : "N/A"
+        const press = typeof d.pressure === "number" ? `${d.pressure.toFixed(2)} hPa` : "N/A"
+      
+        return `
+          <b>${d.city}</b><br>
+          Sensor: ${d.sensorId}<br>
+          Time: ${new Date(d.timestamp).toLocaleString()}<br>
+          Temp: ${temp}<br>
+          Humidity: ${hum}<br>
+          Pressure: ${press}
+        `
+      }),      
       hoverinfo: "text",
       marker: {
         color: cityColors[city] || cityColors.Default,

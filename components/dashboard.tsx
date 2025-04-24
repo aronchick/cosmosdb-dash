@@ -29,12 +29,25 @@ export type SensorReading = {
   id: string
   sensorId: string
   timestamp: string
+  city: string
+  location: string
+  lat: string
+  long: string
+  processingStage: string
   temperature: number
   humidity: number
   pressure: number
-  city: string
-  type: string
+  vibration: number
+  voltage: number
+  status: string
+  firmwareVersion: string
+  model: string
+  manufacturer: string
+  anomalyFlag: boolean
+  anomalyType: string | null
+  rawDataString?: string // optional, since it may or may not be present
 }
+
 
 export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
