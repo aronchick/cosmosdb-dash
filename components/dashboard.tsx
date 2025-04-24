@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { fetchBatchedSensorData, clearAllData, fetchMetadata } from "@/lib/data-service"
 import SensorScatterChart from "@/components/sensor-scatter-chart"
 import SensorStats from "@/components/sensor-stats"
+import SensorThroughput from "@/components/sensor-throughput"
 import SensorTable from "@/components/sensor-table"
 import CitySelector from "@/components/city-selector"
 import CitySensors from "@/components/city-sensors"
@@ -28,12 +29,25 @@ export type SensorReading = {
   id: string
   sensorId: string
   timestamp: string
+  city: string
+  location: string
+  lat: string
+  long: string
+  processingStage: string
   temperature: number
   humidity: number
   pressure: number
-  city: string
-  type: string
+  vibration: number
+  voltage: number
+  status: string
+  firmwareVersion: string
+  model: string
+  manufacturer: string
+  anomalyFlag: boolean
+  anomalyType: string | null
+  rawDataString?: string // optional, since it may or may not be present
 }
+
 
 export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
@@ -338,11 +352,12 @@ export default function Dashboard() {
 
       {/* Main Dashboard Content */}
       <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14 text-xl">
+        <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="throughput">Throughput</TabsTrigger>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Raw Data</TabsTrigger>
+          <TabsTrigger value="table">Data Points</TabsTrigger>
         </TabsList>
 
         <TabsContent value="charts" className="mt-6">
@@ -353,6 +368,12 @@ export default function Dashboard() {
 
         <TabsContent value="stats" className="mt-6">
           <SensorStats
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+          />
+        </TabsContent>
+
+        <TabsContent value="throughput" className="mt-6">
+          <SensorThroughput
             data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
           />
         </TabsContent>
