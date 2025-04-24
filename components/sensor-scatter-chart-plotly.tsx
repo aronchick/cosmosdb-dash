@@ -12,7 +12,7 @@ const TIME_WINDOW_MS = 5 * 60 * 1000
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
   const [hideAnomalies, setHideAnomalies] = useState<boolean>(() => {
-    return localStorage.getItem("hideAnomalies") === "true"
+    return sessionStorage.getItem("hideAnomalies") === "false"
   })
 
   const chartRef = useRef<HTMLDivElement | null>(null)
