@@ -11,6 +11,7 @@ import { Search } from "lucide-react"
 export default function SensorTable({ data }: { data: SensorReading[] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [showRawOnly, setShowRawOnly] = useState(true)
+  const [showRawLatLon, setShowRawLatLon] = useState(true)
 
   const tableData = useMemo(() => {
     const filtered = searchTerm
@@ -29,7 +30,12 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
-        <CardTitle className="text-3xl">Latest Sensor Readings</CardTitle>
+        <CardTitle
+          className="text-3xl"
+          onClick={() => setShowRawLatLon((prev) => !prev)}
+        >
+          Latest Sensor Readings
+        </CardTitle>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-4 gap-4">
           <div className="relative w-full md:w-1/2">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -90,7 +96,11 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
                           <TableCell className="text-lg">{reading.temperature.toFixed(2)}°F</TableCell>
                           <TableCell className="text-lg">{reading.humidity.toFixed(2)}%</TableCell>
                           <TableCell className="text-lg">{reading.pressure.toFixed(2)}</TableCell>
-                          <TableCell className="text-lg">{reading.lat}, {reading.long}</TableCell>
+                          <TableCell className="text-lg">
+                            {showRawLatLon
+                              ? `${reading.lat}, ${reading.long}`
+                              : `${parseFloat(reading.lat).toFixed(2)}, ${parseFloat(reading.long).toFixed(2)}`}
+                          </TableCell>
                         </>
                       )}
                     </TableRow>
