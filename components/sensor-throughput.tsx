@@ -38,38 +38,59 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   }, [data])
 
   const calculateByteSize = (reading: SensorReading) => {
-    const recordSize = new Blob([JSON.stringify(reading)]).size;
+    const recordSize = new Blob([JSON.stringify(reading)]).size
     return recordSize
   }
 
-  const getThroughputSeries = (readings: SensorReading[]) => {
-    const countBuckets: Record<string, number> = {}
-    const byteBuckets: Record<string, number> = {}
+  function formatUnixTime(unixTime: any) {
+    const date = new Date(unixTime * 1000)
+    const hours = date.getHours()
+    const minutes = "0" + date.getMinutes()
+    const seconds = "0" + date.getSeconds()
+    return hours + ":" + minutes.substr(-2) + ":" + seconds.substr(-2)
+  }
 
-    readings.forEach((r) => {
-      const time = new Date(r.timestamp)
-      time.setSeconds(0, 0) // Bucket per minute
-      const bucket = time.toISOString()
+  function generateAltThroughput(readings: SensorReading[]) {
+    const buckets: any = {}
+    readings.forEach((entry) => {
+      const time = new Date(entry.timestamp)
+      const timeKey = (time.getTime() / 1000 | 0).toString()
 
-      countBuckets[bucket] = (countBuckets[bucket] || 0) + 1
-      byteBuckets[bucket] = (byteBuckets[bucket] || 0) + calculateByteSize(r)
-    });
+      if ((time.getTime() / 1000) < ((time.getTime() / 1000) - 300)) return
 
-    const timestamps = Object.keys(countBuckets).sort()
+      if (!buckets[timeKey]) {
+        buckets[timeKey] = []
+      }
+
+      buckets[timeKey].push(entry)
+    })
+
+    const timestamps = Object.keys(buckets).sort()
     return timestamps.map((timestamp) => ({
       timestamp,
-      count: countBuckets[timestamp],
-      kbps: +(byteBuckets[timestamp] / 60 / 1024).toFixed(2), // KB per second
+      count: buckets[timestamp].length,
+      kbps: calculateByteSize(buckets[timestamp]) / 1024
     }))
   }
 
+  const totalKb = useMemo(() => {
+    return Object.values(groupedData)
+      .flatMap((sensors) => Object.values(sensors))
+      .flatMap((readings) => generateAltThroughput(readings))
+      .reduce((sum, point) => sum + point.kbps, 0) * 5 * 60 // convert KB/s to total KB over 5 minutes
+  }, [groupedData])
+
   return (
     <div>
-      <h2 className="text-3xl mb-4">Sensor Throughput (Prev. 5 Minutes)</h2>
+      <h2 className="text-3xl mb-4">
+        Sensor Throughput (Prev. 5 Minutes)
+        <span className="text-lg text-gray-400 font-normal ml-2">
+          ({(totalKb / 1000).toFixed(2)} MB)
+        </span>
+      </h2>
       {Object.entries(groupedData).map(([city, sensors]) => {
-        // Aggregate total KB/s across all sensors in the city
         const totalKbps = Object.values(sensors)
-          .flatMap((readings) => getThroughputSeries(readings))
+          .flatMap((readings) => generateAltThroughput(readings))
           .reduce((sum, point) => sum + point.kbps, 0)
 
         return (
@@ -82,7 +103,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {Object.entries(sensors).map(([sensorId, readings]) => {
-                const series = getThroughputSeries(readings)
+                const series = generateAltThroughput(readings)
                 const latest = new Date(
                   Math.max(...readings.map((r) => new Date(r.timestamp).getTime()))
                 ).toLocaleTimeString()
@@ -109,7 +130,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                               <YAxis hide />
                               <Tooltip
                                 contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                                labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                labelFormatter={(value) => formatUnixTime(value)}
                               />
                             </LineChart>
                           </ResponsiveContainer>
@@ -130,7 +151,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                               <YAxis hide />
                               <Tooltip
                                 contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
-                                labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                labelFormatter={(value) => formatUnixTime(value)}
                                 formatter={(value: number) => [`${value.toFixed(2)} KB/s`, "Rate"]}
                               />
                             </LineChart>
