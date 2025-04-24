@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { SensorReading } from "@/components/dashboard"
 
-const TIME_WINDOW_MS = 5 * 60 * 1000
+const TIME_WINDOW_MS = 2 * 60 * 1000
 
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
@@ -201,7 +201,6 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
         <p className="text-right text-sm text-gray-400 mb-2">
           Plotting {filteredData.length.toLocaleString()} points
         </p>
-        <p className="text-right text-sm text-white-400 mb-2">Showing last 30 seconds...</p>
         <div ref={chartRef} className="w-full h-[600px]" />
       </CardContent>
     </Card>
