@@ -29,40 +29,37 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     Default: "#FF00FF",
   }
 
-  let storedColors = localStorage.getItem("cityColors");
+  let storedColors: any = localStorage.getItem("cityColors")
 
-  if(storedColors){
-    storedColors = JSON.parse(storedColors);
+  if (storedColors) {
+    storedColors = JSON.parse(storedColors)
   } else {
-    storedColors = {};
+    storedColors = {}
   }
 
-  Object.keys(storedColors).forEach(colorKey => {
-
-    if(!cityColors[colorKey]){
-        cityColors[colorKey] = storedColors[colorKey];
+  Object.keys(storedColors).forEach((colorKey) => {
+    if (!cityColors[colorKey]) {
+      cityColors[colorKey] = storedColors[colorKey]
     }
+  })
 
-  });
-
-  function generateCityColor(city: any){
-
-    const rgb = `rgb(${Math.random() * 255 | 0}, ${Math.random() * 255 | 0}, ${Math.random() * 255 | 0},)`;
-
-    cityColors[city] = rgb;
-
-    localStorage.setItem("cityColors", JSON.stringify(cityColors));
-
-    return rgb;
-
+  function generateCityColor(city: string) {
+    const rgb = `rgb(${Math.random() * 255 | 0}, ${Math.random() * 255 | 0}, ${Math.random() * 255 | 0})`
+    cityColors[city] = rgb
+    localStorage.setItem("cityColors", JSON.stringify(cityColors))
+    return rgb
   }
 
   const getMetricLabel = (metric: string) => {
     switch (metric) {
-      case "temperature": return "Temperature (°F)"
-      case "humidity": return "Humidity (%)"
-      case "pressure": return "Pressure (hPa)"
-      default: return metric
+      case "temperature":
+        return "Temperature (°F)"
+      case "humidity":
+        return "Humidity (%)"
+      case "pressure":
+        return "Pressure (hPa)"
+      default:
+        return metric
     }
   }
 
@@ -82,40 +79,48 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
   }, [filteredData])
 
   useEffect(() => {
-    const traces = Object.entries(groupedByCity).map(([city, items]) => ({
-      type: "scattergl",
-      mode: "markers",
-      name: city,
-      x: items.map((d) => new Date(d.timestamp)),
-      y: items.map((d) => d[metric]),
-      text: items.map((d) => {
-        const temp = typeof d.temperature === "number" ? `${d.temperature.toFixed(2)} °F` : "N/A"
-        const hum = typeof d.humidity === "number" ? `${d.humidity.toFixed(2)}%` : "N/A"
-        const press = typeof d.pressure === "number" ? `${d.pressure.toFixed(2)} hPa` : "N/A"
-        const model = !!d.model ? `${d.model}` : "Unknown"
-        const firmwareVersion = !!d.firmwareVersion ? `${d.firmwareVersion}` : "Unknown"
-      
-        return `
-          <b>${d.city}</b><br>
-          Sensor: ${d.sensorId}<br>
-          Time: ${new Date(d.timestamp).toLocaleString()}<br>
-          Temp: ${temp}<br>
-          Humidity: ${hum}<br>
-          Pressure: ${press}<br>
-          Model: ${model}<br>
-          Firmware: ${firmwareVersion}
-        `
-      }),      
-      hoverinfo: "text",
-      marker: {
-        color: cityColors[city] || generateCityColor(city),
-        size: items.map((d) => d.anomalyFlag ? 8 : 3),
-        line: {
-            width: 0  // removes the border
-        }
-      },
-      showlegend: true
-    }))
+    const traces: any = Object.entries(groupedByCity).map(([city, items]) => {
+      const markerColor = cityColors[city] || generateCityColor(city)
+
+      return {
+        type: "scattergl",
+        mode: "markers",
+        name: city,
+        x: items.map((d) => new Date(d.timestamp)),
+        y: items.map((d) => d[metric]),
+        text: items.map((d) => {
+          const temp = typeof d.temperature === "number" ? `${d.temperature.toFixed(2)} °F` : "N/A"
+          const hum = typeof d.humidity === "number" ? `${d.humidity.toFixed(2)}%` : "N/A"
+          const press = typeof d.pressure === "number" ? `${d.pressure.toFixed(2)} hPa` : "N/A"
+          const model = d.model || "Unknown"
+          const firmwareVersion = d.firmwareVersion || "Unknown"
+
+          return `
+            <b>${d.city}</b><br>
+            Sensor: ${d.sensorId}<br>
+            Time: ${new Date(d.timestamp).toLocaleString()}<br>
+            Temp: ${temp}<br>
+            Humidity: ${hum}<br>
+            Pressure: ${press}<br>
+            Model: ${model}<br>
+            Firmware: ${firmwareVersion}
+          `
+        }),
+        hoverinfo: "text",
+        marker: {
+          color: markerColor,
+          size: items.map((d) => d.anomalyFlag ? 8 : 3),
+          line: { width: 0 }
+        },
+        hoverlabel: {
+          bgcolor: "#000000",
+          bordercolor: markerColor,
+          font: { color: "#ffffff" },
+          padding: 0
+        },
+        showlegend: true
+      }
+    })
 
     const layout: Partial<Plotly.Layout> = {
       title: {
@@ -177,7 +182,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
       </CardHeader>
       <CardContent>
         <p className="text-right text-sm text-gray-400 mb-2">
-            Plotting {filteredData.length.toLocaleString()} points
+          Plotting {filteredData.length.toLocaleString()} points
         </p>
         <div ref={chartRef} className="w-full h-[600px]" />
       </CardContent>
