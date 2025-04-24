@@ -66,6 +66,7 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
                     <TableHead className="text-xl">Temperature</TableHead>
                     <TableHead className="text-xl">Humidity</TableHead>
                     <TableHead className="text-xl">Pressure</TableHead>
+                    <TableHead className="text-xl">Lat/Lon</TableHead>
                   </>
                 )}
               </TableRow>
@@ -89,6 +90,7 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
                           <TableCell className="text-lg">{reading.temperature.toFixed(2)}°F</TableCell>
                           <TableCell className="text-lg">{reading.humidity.toFixed(2)}%</TableCell>
                           <TableCell className="text-lg">{reading.pressure.toFixed(2)}</TableCell>
+                          <TableCell className="text-lg">{reading.lat}, {reading.long}</TableCell>
                         </>
                       )}
                     </TableRow>

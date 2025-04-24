@@ -357,7 +357,7 @@ export default function Dashboard() {
           <TabsTrigger value="stats">Statistics</TabsTrigger>
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Raw Data</TabsTrigger>
+          <TabsTrigger value="table">Data Points</TabsTrigger>
         </TabsList>
 
         <TabsContent value="charts" className="mt-6">
