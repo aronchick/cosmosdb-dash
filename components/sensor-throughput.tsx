@@ -99,7 +99,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       <h2
         className="text-3xl mb-4"
         onClick={handleToggleDivision}
-        title="Click to toggle divide-by-60 mode for all cities"
+        title=""
       >
         Sensor Throughput<br/>
         <span className="text-2xl text-white-800 font-bold">

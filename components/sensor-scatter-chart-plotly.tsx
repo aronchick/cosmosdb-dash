@@ -180,7 +180,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
       <CardHeader>
         <CardTitle
           className="text-3xl transition"
-          title="Click to toggle hiding anomaly data"
+          title=""
           onClick={handleToggleAnomalies}
         >
           Sensor Data Scatter Plot {hideAnomalies && ""}
