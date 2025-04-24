@@ -11,6 +11,10 @@ const TIME_WINDOW_MS = 5 * 60 * 1000
 
 export default function SensorScatterChart({ data }: { data: SensorReading[] }) {
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
+  const [hideAnomalies, setHideAnomalies] = useState<boolean>(() => {
+    return localStorage.getItem("hideAnomalies") === "true"
+  })
+
   const chartRef = useRef<HTMLDivElement | null>(null)
 
   const cityColors: Record<string, string> = {
@@ -52,14 +56,10 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
 
   const getMetricLabel = (metric: string) => {
     switch (metric) {
-      case "temperature":
-        return "Temperature (°F)"
-      case "humidity":
-        return "Humidity (%)"
-      case "pressure":
-        return "Pressure (hPa)"
-      default:
-        return metric
+      case "temperature": return "Temperature (°F)"
+      case "humidity": return "Humidity (%)"
+      case "pressure": return "Pressure (hPa)"
+      default: return metric
     }
   }
 
@@ -78,17 +78,27 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     return groups
   }, [filteredData])
 
+  const handleToggleAnomalies = () => {
+    setHideAnomalies((prev) => {
+      const next = !prev
+      localStorage.setItem("hideAnomalies", String(next))
+      return next
+    })
+  }
+
   useEffect(() => {
     const traces: any = Object.entries(groupedByCity).map(([city, items]) => {
       const markerColor = cityColors[city] || generateCityColor(city)
+
+      const filteredItems = hideAnomalies ? items.filter((d) => !d.anomalyFlag) : items
 
       return {
         type: "scattergl",
         mode: "markers",
         name: city,
-        x: items.map((d) => new Date(d.timestamp)),
-        y: items.map((d) => d[metric]),
-        text: items.map((d) => {
+        x: filteredItems.map((d) => new Date(d.timestamp)),
+        y: filteredItems.map((d) => d[metric]),
+        text: filteredItems.map((d) => {
           const temp = typeof d.temperature === "number" ? `${d.temperature.toFixed(2)} °F` : "N/A"
           const hum = typeof d.humidity === "number" ? `${d.humidity.toFixed(2)}%` : "N/A"
           const press = typeof d.pressure === "number" ? `${d.pressure.toFixed(2)} hPa` : "N/A"
@@ -109,7 +119,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
         hoverinfo: "text",
         marker: {
           color: markerColor,
-          size: items.map((d) => d.anomalyFlag ? 8 : 3),
+          size: filteredItems.map((d) => d.anomalyFlag ? 8 : 3),
           line: { width: 0 }
         },
         hoverlabel: {
@@ -163,12 +173,18 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
       responsive: true,
       displayModeBar: false
     })
-  }, [metric, groupedByCity])
+  }, [metric, groupedByCity, hideAnomalies])
 
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
-        <CardTitle className="text-3xl">Sensor Data Scatter Plot</CardTitle>
+        <CardTitle
+          className="text-3xl transition"
+          title="Click to toggle hiding anomaly data"
+          onClick={handleToggleAnomalies}
+        >
+          Sensor Data Scatter Plot {hideAnomalies && ""}
+        </CardTitle>
         <Tabs
           value={metric}
           onValueChange={(value) => setMetric(value as "temperature" | "humidity" | "pressure")}
