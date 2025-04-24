@@ -29,6 +29,34 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
     Default: "#FF00FF",
   }
 
+  let storedColors = localStorage.getItem("cityColors");
+
+  if(storedColors){
+    storedColors = JSON.parse(storedColors);
+  } else {
+    storedColors = {};
+  }
+
+  Object.keys(storedColors).forEach(colorKey => {
+
+    if(!cityColors[colorKey]){
+        cityColors[colorKey] = storedColors[colorKey];
+    }
+
+  });
+
+  function generateCityColor(city: any){
+
+    const rgb = `rgb(${Math.random() * 255 | 0}, ${Math.random() * 255 | 0}, ${Math.random() * 255 | 0},)`;
+
+    cityColors[city] = rgb;
+
+    localStorage.setItem("cityColors", JSON.stringify(cityColors));
+
+    return rgb;
+
+  }
+
   const getMetricLabel = (metric: string) => {
     switch (metric) {
       case "temperature": return "Temperature (°F)"
@@ -80,7 +108,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
       }),      
       hoverinfo: "text",
       marker: {
-        color: cityColors[city] || cityColors.Default,
+        color: cityColors[city] || generateCityColor(city),
         size: items.map((d) => d.anomalyFlag ? 8 : 3),
         line: {
             width: 0  // removes the border
