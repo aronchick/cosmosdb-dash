@@ -38,7 +38,8 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   }, [data])
 
   const calculateByteSize = (reading: SensorReading) => {
-    return new Blob([JSON.stringify(reading)]).size
+    const recordSize = new Blob([JSON.stringify(reading)]).size;
+    return recordSize
   }
 
   const getThroughputSeries = (readings: SensorReading[]) => {
@@ -52,7 +53,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
       countBuckets[bucket] = (countBuckets[bucket] || 0) + 1
       byteBuckets[bucket] = (byteBuckets[bucket] || 0) + calculateByteSize(r)
-    })
+    });
 
     const timestamps = Object.keys(countBuckets).sort()
     return timestamps.map((timestamp) => ({

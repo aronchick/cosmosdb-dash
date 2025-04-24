@@ -10,7 +10,7 @@ import { Search } from "lucide-react"
 
 export default function SensorTable({ data }: { data: SensorReading[] }) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [showRawOnly, setShowRawOnly] = useState(false)
+  const [showRawOnly, setShowRawOnly] = useState(true)
 
   const tableData = useMemo(() => {
     const filtered = searchTerm
@@ -46,7 +46,7 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
             onClick={() => setShowRawOnly((prev) => !prev)}
             className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
           >
-            {showRawOnly ? "Show Full Table" : "Show Raw Data Only"}
+            {showRawOnly ? "Show Schematised" : "Raw Data"}
           </Button>
         </div>
       </CardHeader>
