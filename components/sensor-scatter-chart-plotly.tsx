@@ -185,6 +185,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
         <p className="text-right text-sm text-gray-400 mb-2">
           Plotting {filteredData.length.toLocaleString()} points
         </p>
+        <p className="text-right text-sm text-white-400 mb-2">Showing last 30 seconds...</p>
         <div ref={chartRef} className="w-full h-[600px]" />
       </CardContent>
     </Card>
