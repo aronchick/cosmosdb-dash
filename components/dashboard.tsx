@@ -236,6 +236,13 @@ export default function Dashboard() {
 
   // Initial setup and metadata refresh
   useEffect(() => {
+
+    if (Object.keys(lastTimestampsRef.current).length === 0) {
+      const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
+      lastTimestampsRef.current["__default"] = thirtySecondsAgo;
+      console.log("Initialized lastTimestampsRef with:", lastTimestampsRef.current);
+    }
+
     // Initial metadata fetch
     fetchMetadataInfo()
 
