@@ -1,52 +1,39 @@
 "use client"
 
 import { useMemo, useState, useEffect, useRef } from "react"
-import dynamic from "next/dynamic"
 import Plotly from "plotly.js-dist-min"
 import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const FIVE_MIN_MS = 5 * 60 * 1000
+const TWO_MINUTES_MS = 2 * 60 * 1000
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
-  const chartRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const chartRef = useRef<HTMLDivElement | null>(null)
 
   const groupedData = useMemo(() => {
-    const now = new Date()
-    now.setSeconds(0, 0)
-    const cutoff = now.getTime() - FIVE_MIN_MS
+    const now = Date.now()
+    const cutoff = now - TWO_MINUTES_MS
 
-    const grouped: Record<string, Record<string, SensorReading[]>> = {}
+    const grouped: Record<string, SensorReading[]> = {}
 
     data.forEach((reading) => {
       const timestamp = new Date(reading.timestamp).getTime()
-      if (timestamp < cutoff || timestamp >= now.getTime()) return
+      if (timestamp < cutoff || timestamp > now) return
 
       const city = reading.city
-      const sensor = reading.sensorId
-
-      if (!grouped[city]) grouped[city] = {}
-      if (!grouped[city][sensor]) grouped[city][sensor] = []
-      grouped[city][sensor].push(reading)
+      if (!grouped[city]) grouped[city] = []
+      grouped[city].push(reading)
     })
 
     return grouped
   }, [data])
 
-  const calculateByteSize = (reading: any) => {
+  const calculateByteSize = (reading: SensorReading) => {
     return new Blob([JSON.stringify(reading)]).size
   }
 
-  function formatUnixTime(unixTime: number) {
-    const date = new Date(unixTime * 1000)
-    const hours = date.getHours()
-    const minutes = "0" + date.getMinutes()
-    const seconds = "0" + date.getSeconds()
-    return hours + ":" + minutes.substr(-2) + ":" + seconds.substr(-2)
-  }
-
-  function generateAltThroughput(readings: any[], divideAfter?: any) {
+  const generateThroughput = (readings: SensorReading[], divideAfter?: number) => {
     const buckets: Record<string, SensorReading[]> = {}
 
     readings.forEach((entry) => {
@@ -73,70 +60,84 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   }
 
   const totalKb = useMemo(() => {
-    return Object.entries(groupedData)
-      .flatMap(([city, sensors]) =>
-        Object.values(sensors).flatMap((readings) =>
-          generateAltThroughput(readings, divisionToggleTime)
-        )
-      )
-      .reduce((sum, point) => sum + point.kbps, 0) * 5 * 60
-  }, [groupedData, divisionToggleTime])
+    return Object.values(groupedData)
+      .flat()
+      .reduce((sum, reading) => sum + calculateByteSize(reading) / 1024, 0)
+  }, [groupedData])
 
   const handleToggleDivision = () => {
     const now = Math.floor(Date.now() / 1000)
-    setDivisionToggleTime((prev) => (prev ? null : now))
+    setDivisionToggleTime(prev => (prev ? null : now))
   }
 
   const isDivisionActive = !!divisionToggleTime
   const adjustedMb = isDivisionActive ? (totalKb / 1000) / 60 : totalKb / 1000
 
   useEffect(() => {
-    Object.entries(groupedData).forEach(([city, sensors]) => {
-      Object.entries(sensors).forEach(([sensorId, readings]) => {
-        const series = generateAltThroughput(readings, divisionToggleTime)
+    if (!chartRef.current) return
 
-        const countTrace: any = {
-          type: "scattergl",
-          mode: "lines",
-          name: "Count/sec",
-          x: series.map((point) => new Date(parseInt(point.timestamp) * 1000)),
-          y: series.map((point) => point.count),
-          line: { color: "#4FD1C5" },
-        }
+    const now = Date.now()
+    const twoMinutesAgo = now - TWO_MINUTES_MS
 
-        const kbpsTrace: any = {
-          type: "scattergl",
-          mode: "lines",
-          name: "KB/sec",
-          x: series.map((point) => new Date(parseInt(point.timestamp) * 1000)),
-          y: series.map((point) => point.kbps),
-          line: { color: "#FBBF24" },
-        }
+    const allSeries = Object.entries(groupedData).map(([city, readings]) => {
+      const points = generateThroughput(readings, divisionToggleTime)
+        .filter(point => {
+          const ts = parseInt(point.timestamp) * 1000
+          return ts >= twoMinutesAgo && ts <= now
+        })
 
-        const layout: Partial<Plotly.Layout> = {
-          margin: { t: 0, b: 20, l: 30, r: 10 },
-          xaxis: { showgrid: false, zeroline: false, tickformat: "%H:%M:%S" },
-          yaxis: { showgrid: false, zeroline: false },
-          showlegend: false,
-          height: 100,
-          paper_bgcolor: "transparent",
-          plot_bgcolor: "transparent",
-        }
-
-        if (chartRefs.current[`${sensorId}-count`]) {
-          Plotly.react(chartRefs.current[`${sensorId}-count`]!, [countTrace], layout, { displayModeBar: false })
-        }
-        if (chartRefs.current[`${sensorId}-kbps`]) {
-          Plotly.react(chartRefs.current[`${sensorId}-kbps`]!, [kbpsTrace], layout, { displayModeBar: false })
-        }
-      })
+      return {
+        type: "scattergl",
+        mode: "lines",
+        name: city,
+        x: points.map(p => new Date(parseInt(p.timestamp) * 1000)),
+        y: points.map(p => p.kbps),
+        line: {
+          width: 2,
+          shape: "spline",
+          smoothing: 1.3
+        },
+      }
     })
+
+    Plotly.react(chartRef.current, allSeries, {
+      title: {
+        text: "City Throughput (KB/s)",
+        font: { color: "#ffffff", size: 20 },
+      },
+      xaxis: {
+        title: "Time",
+        type: "date",
+        range: [new Date(twoMinutesAgo), new Date(now)],
+        showgrid: false,
+        tickformat: "%H:%M:%S",
+        color: "#ffffff",
+      },
+      yaxis: {
+        title: "KB/s",
+        showgrid: true,
+        gridcolor: "#333",
+        color: "#ffffff",
+      },
+      plot_bgcolor: "transparent",
+      paper_bgcolor: "transparent",
+      font: { color: "#ffffff" },
+      margin: { t: 40, b: 40, l: 50, r: 30 },
+      hovermode: "closest",
+      legend: {
+        orientation: "h",
+        x: 0.5,
+        xanchor: "center",
+        y: -0.2,
+        font: { size: 12, color: "#ffffff" },
+      },
+    }, { responsive: true, displayModeBar: false })
   }, [groupedData, divisionToggleTime])
 
   return (
     <div>
       <h2
-        className="text-3xl mb-4 cursor-pointer hover:text-blue-400"
+        className="text-3xl mb-6 cursor-pointer hover:text-blue-400"
         onClick={handleToggleDivision}
         title="Click to toggle divide-by-60 mode"
       >
@@ -147,50 +148,14 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         </span>
       </h2>
 
-      {Object.entries(groupedData).map(([city, sensors]) => {
-        const totalKbps = Object.values(sensors)
-          .flatMap((readings) => generateAltThroughput(readings, divisionToggleTime))
-          .reduce((sum, point) => sum + point.kbps, 0)
-
-        return (
-          <div key={city} className="mb-10">
-            <h3 className="text-2xl font-bold mb-4">{city}
-              <br />
-              <span className="text-white-600 text-lg font-normal">
-                ({totalKbps.toFixed(2)} KB/s)
-              </span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Object.entries(sensors).map(([sensorId, readings]) => {
-                return (
-                  <Card key={sensorId} className="bg-gray-900 border-gray-800 pb-5">
-                    <CardHeader>
-                      <CardTitle className="text-xl font-bold">{sensorId}</CardTitle>
-                      <p className="text-sm text-gray-400">
-                        Last update: {new Date(
-                          Math.max(...readings.map((r) => new Date(r.timestamp).getTime()))
-                        ).toLocaleTimeString()}
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="h-24">
-                          <div ref={(el) => (chartRefs.current[`${sensorId}-count`] = el)} className="w-full h-full" />
-                          <p className="text-center text-sm text-gray-400 mt-1">Items/sec</p>
-                        </div>
-                        <div className="h-24">
-                          <div ref={(el) => (chartRefs.current[`${sensorId}-kbps`] = el)} className="w-full h-full" />
-                          <p className="text-center text-sm text-gray-400 mt-1">KB/sec</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+      <Card className="bg-gray-900 border-gray-800">
+        <CardHeader>
+          <CardTitle className="text-2xl">City Throughput (Last 2 minutes)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div ref={chartRef} className="w-full h-[500px]" />
+        </CardContent>
+      </Card>
     </div>
   )
 }
