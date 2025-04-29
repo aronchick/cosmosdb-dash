@@ -52,7 +52,7 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
             onClick={() => setShowRawOnly((prev) => !prev)}
             className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
           >
-            {showRawOnly ? "Show Schematised" : "Raw Data"}
+            {showRawOnly ? "" : ""}
           </Button>
         </div>
       </CardHeader>
