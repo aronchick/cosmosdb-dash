@@ -119,7 +119,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
         hoverinfo: "text",
         marker: {
           color: markerColor,
-          size: filteredItems.map((d) => d.anomalyFlag ? 8 : 3),
+          size: filteredItems.map((d) => d.anomalyFlag ? 16 : 6),
           line: { width: 0 }
         },
         hoverlabel: {
