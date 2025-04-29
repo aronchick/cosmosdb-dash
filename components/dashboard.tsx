@@ -354,10 +354,10 @@ export default function Dashboard() {
       <Tabs defaultValue="charts" className="w-full">
         <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="charts">Charts</TabsTrigger>
+          <TabsTrigger value="table">Data Points</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Data Points</TabsTrigger>
         </TabsList>
 
         <TabsContent value="charts" className="mt-6">
