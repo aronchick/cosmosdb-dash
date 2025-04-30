@@ -5,7 +5,8 @@ import { fetchBatchedSensorData, clearAllData, fetchMetadata } from "@/lib/data-
 import SensorScatterChart from "@/components/sensor-scatter-chart"
 import SensorStats from "@/components/sensor-stats"
 import SensorThroughput from "@/components/sensor-throughput"
-import SensorTable from "@/components/sensor-table"
+import SensorTableRaw from "@/components/sensor-table-raw"
+import SensorTableStructured from "@/components/sensor-table-structured"
 import CitySelector from "@/components/city-selector"
 import CitySensors from "@/components/city-sensors"
 import { Card, CardContent } from "@/components/ui/card"
@@ -354,8 +355,8 @@ export default function Dashboard() {
       <Tabs defaultValue="stats" className="w-full">
         <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="stats">All Sensors</TabsTrigger>
-          <TabsTrigger value="table">Raw Data</TabsTrigger>
-          <TabsTrigger value="blah">Schematised Data</TabsTrigger>
+          <TabsTrigger value="rawdata">Raw Data</TabsTrigger>
+          <TabsTrigger value="schematised">Schematised Data</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
           {/* <TabsTrigger value="sensors">Sensors</TabsTrigger> */}
@@ -385,8 +386,14 @@ export default function Dashboard() {
           />
         </TabsContent> */}
 
-        <TabsContent value="table" className="mt-6">
-          <SensorTable
+        <TabsContent value="rawdata" className="mt-6">
+          <SensorTableRaw
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+          />
+        </TabsContent>
+
+        <TabsContent value="schematised" className="mt-6">
+          <SensorTableStructured
             data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
           />
         </TabsContent>
