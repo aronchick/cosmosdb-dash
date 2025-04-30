@@ -11,7 +11,7 @@ const MIN_BUCKET_AGE_MS = 7 * 1000 // 7 seconds buffer to avoid plotting incompl
 export default function SensorThroughput({ data, activeView }: { data: SensorReading[], activeView: any }) {
 
   if(activeView !== "throughput") {
-    return
+    return null;
   }
   
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
@@ -20,6 +20,16 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
   const now = Date.now()
   const windowStart = now - TWO_MINUTES_MS
   const windowEnd = now - MIN_BUCKET_AGE_MS
+
+  const readingSizeMap = useMemo(() => {
+    const map = new Map<string, number>()
+    data.forEach((reading) => {
+      map.set(reading.id, new Blob([JSON.stringify(reading)]).size)
+    })
+    return map
+  }, [data])
+  
+  const getSize = (id: string) => readingSizeMap.get(id) || 0
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
@@ -63,7 +73,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     return timestamps.map((ts) => {
       const bucket = buckets[ts.toString()]
       const kbps =
-        bucket.reduce((sum, r) => sum + calculateByteSize(r), 0) / 1024
+        bucket.reduce((sum, r) => sum + getSize(r.id), 0) / 1024
       const divided = divideAfter && ts >= divideAfter
       return {
         timestamp: ts,
@@ -81,7 +91,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
 
   const totalKb = useMemo(() => {
     return filteredReadings.reduce(
-      (sum, r) => sum + calculateByteSize(r) / 1024,
+      (sum, r) => sum + getSize(r.id) / 1024,
       0
     )
   }, [filteredReadings])
@@ -96,12 +106,14 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
       const ts = Date.parse(r.timestamp)
       return ts >= cutoff && ts <= Date.now()
     })
-    const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
+    const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
     return windowMs > 0 ? totalKb / (windowMs / 1000) : 0
   }
 
   useEffect(() => {
-    if (!chartRef.current) return
+    if (!chartRef.current) {
+      return
+    }
 
     const throughputSeries = generateThroughput(filteredReadings, divisionToggleTime)
 
@@ -210,7 +222,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
                     const ts = Date.parse(r.timestamp)
                     return ts >= cutoff && ts <= Date.now()
                   })
-                  const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
+                  const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
                   return totalKb / 1000
                 })()
 
