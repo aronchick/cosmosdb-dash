@@ -6,8 +6,12 @@ export async function fetchBatchedSensorData(lastTimestamps: Record<string, stri
     // Convert the lastTimestamps object to a JSON string to pass as a query parameter
     const timestampsParam = encodeURIComponent(JSON.stringify(lastTimestamps))
 
-    const response = await fetch(`/api/sensors/batch?timestamps=${timestampsParam}`,
-      { method : "POST" }
+    const payload = JSON.stringify({
+      timestamps : lastTimestamps
+    });
+
+    const response = await fetch(`/api/sensors/batch`,
+      { method : "POST", body : payload }
     );
 
     if (!response.ok) {
