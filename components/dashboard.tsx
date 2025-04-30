@@ -354,10 +354,11 @@ export default function Dashboard() {
       <Tabs defaultValue="stats" className="w-full">
         <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="stats">All Sensors</TabsTrigger>
+          <TabsTrigger value="table">Raw Data</TabsTrigger>
+          <TabsTrigger value="blah">Schematised Data</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
-          <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Data Points</TabsTrigger>
+          {/* <TabsTrigger value="sensors">Sensors</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="charts" className="mt-6">
@@ -378,11 +379,11 @@ export default function Dashboard() {
           />
         </TabsContent>
         
-        <TabsContent value="sensors" className="mt-6">
+        {/* <TabsContent value="sensors" className="mt-6">
           <CitySensors
             data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
           />
-        </TabsContent>
+        </TabsContent> */}
 
         <TabsContent value="table" className="mt-6">
           <SensorTable
