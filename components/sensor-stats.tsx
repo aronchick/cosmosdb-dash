@@ -35,7 +35,7 @@ const metricColors: Record<string, string> = {
 const TIME_WINDOW_MS = 20 * 60 * 1000
 const SCATTER_WINDOW_MS = 2 * 60 * 1000
 
-export default function SensorStats({ data }: { data: SensorReading[] }) {
+export default function SensorStats({ data, activeView }: { data: SensorReading[], activeView: any }) {
   const [view, setView] = useState<"data" | "charts" | "scatter">("data")
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
   const [hideAnomalies, setHideAnomalies] = useState<boolean>(() => {
@@ -161,7 +161,7 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
       return rgb
     }
 
-    const traces = Object.entries(groupedForScatter).map(([city, items]) => {
+    const traces: any = Object.entries(groupedForScatter).map(([city, items]) => {
       const color = cityColors[city] || generateCityColor(city)
       const filtered = hideAnomalies ? items.filter((d) => !d.anomalyFlag) : items
 

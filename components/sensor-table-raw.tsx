@@ -7,7 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-export default function SensorTableRaw({ data }: { data: SensorReading[] }) {
+export default function SensorTableRaw({ data, activeView }: { data: SensorReading[], activeView: any }) {
+
+  if(activeView !== "rawdata"){
+    return;
+  }
+
   const [searchTerm, setSearchTerm] = useState("")
 
   const filteredRows = useMemo(() => {

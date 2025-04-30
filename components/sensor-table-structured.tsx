@@ -7,7 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
-export default function SensorTableStructured({ data }: { data: SensorReading[] }) {
+export default function SensorTableStructured({ data, activeView }: { data: SensorReading[], activeView: any }) {
+  
+  if(activeView !== "schematised"){
+    return;
+  }
+
   const [searchTerm, setSearchTerm] = useState("")
   const [showRawLatLon, setShowRawLatLon] = useState(true)
 

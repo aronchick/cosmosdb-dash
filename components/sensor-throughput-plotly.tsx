@@ -8,7 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 const TWO_MINUTES_MS = 2 * 60 * 1000
 const MIN_BUCKET_AGE_MS = 7 * 1000 // 7 seconds buffer to avoid plotting incomplete buckets
 
-export default function SensorThroughput({ data }: { data: SensorReading[] }) {
+export default function SensorThroughput({ data, activeView }: { data: SensorReading[], activeView: any }) {
+
+  if(activeView !== "throughput") {
+    return
+  }
+  
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
   const chartRef = useRef<HTMLDivElement | null>(null)
 
