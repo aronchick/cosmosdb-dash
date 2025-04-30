@@ -6,7 +6,7 @@ import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const TWO_MINUTES_MS = 2 * 60 * 1000
-const MIN_BUCKET_AGE_MS = 7 * 1000 // 6 seconds minimum buffer (slightly more aggressive)
+const MIN_BUCKET_AGE_MS = 7 * 1000 // 7 seconds buffer to avoid plotting incomplete buckets
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
@@ -14,11 +14,11 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
   const now = Date.now()
   const windowStart = now - TWO_MINUTES_MS
-  const windowEnd = now - MIN_BUCKET_AGE_MS // cutoff firmly in the past
+  const windowEnd = now - MIN_BUCKET_AGE_MS
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
-      const ts = new Date(reading.timestamp).getTime()
+      const ts = Date.parse(reading.timestamp)
       return ts >= windowStart && ts <= windowEnd
     })
   }, [data])
@@ -43,23 +43,22 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     const buckets: Record<string, SensorReading[]> = {}
 
     readings.forEach((entry) => {
-      const time = new Date(entry.timestamp)
-      const bucketTime = Math.floor(time.getTime() / 1000)
+      const timeMs = Date.parse(entry.timestamp)
+      const bucketTime = Math.floor(timeMs / 1000)
       const key = bucketTime.toString()
       if (!buckets[key]) buckets[key] = []
       buckets[key].push(entry)
     })
 
     const timestamps = Object.keys(buckets)
-      .map((t) => parseInt(t))
-      .filter((ts) => ts * 1000 <= windowEnd) // ✅ remove future-ish buckets
+      .map(Number)
+      .filter((ts) => ts * 1000 <= windowEnd)
       .sort((a, b) => a - b)
 
     return timestamps.map((ts) => {
       const bucket = buckets[ts.toString()]
       const kbps =
         bucket.reduce((sum, r) => sum + calculateByteSize(r), 0) / 1024
-
       const divided = divideAfter && ts >= divideAfter
       return {
         timestamp: ts,
@@ -86,13 +85,11 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     ? totalKb / 1000 / 60
     : totalKb / 1000
 
-  // Average helper
   const calculateAverageKbps = (readings: SensorReading[], windowMs: number) => {
-    const now = Date.now()
-    const cutoff = now - windowMs
+    const cutoff = Date.now() - windowMs
     const selected = readings.filter((r) => {
-      const ts = new Date(r.timestamp).getTime()
-      return ts >= cutoff && ts <= now
+      const ts = Date.parse(r.timestamp)
+      return ts >= cutoff && ts <= Date.now()
     })
     const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
     return windowMs > 0 ? totalKb / (windowMs / 1000) : 0
@@ -112,7 +109,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       line: {
         width: 2,
         shape: "spline",
-        smoothing: 0.7,
+        smoothing: 0.1,
         color: "#4FD1C5",
       },
     }
@@ -205,7 +202,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                 const totalMb30min = (() => {
                   const cutoff = Date.now() - 30 * 60_000
                   const selected = readings.filter((r) => {
-                    const ts = new Date(r.timestamp).getTime()
+                    const ts = Date.parse(r.timestamp)
                     return ts >= cutoff && ts <= Date.now()
                   })
                   const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
