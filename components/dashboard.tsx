@@ -1,9 +1,9 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useState, useRef } from "react"
 import { fetchBatchedSensorData, clearAllData, fetchMetadata } from "@/lib/data-service"
 import SensorScatterChart from "@/components/sensor-scatter-chart"
-import SensorStats from "@/components/sensor-stats"
 import SensorThroughput from "@/components/sensor-throughput"
 import SensorTableRaw from "@/components/sensor-table-raw"
 import SensorTableStructured from "@/components/sensor-table-structured"
@@ -25,6 +25,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+
+const SensorStats = dynamic(() => import("@/components/sensor-stats"), {
+  ssr: false,
+})
 
 export type SensorReading = {
   id: string
@@ -159,7 +163,16 @@ export default function Dashboard() {
         generateMockData()
       }
     } finally {
-      isFetchingRef.current = false
+      // isFetchingRef.current = false
+
+      (function(isFetchingRef){
+
+        setTimeout(function(){
+          isFetchingRef.current = false;
+        }, 1000);
+
+      })(isFetchingRef);
+
       setIsLoading(false)
     }
   }
@@ -254,7 +267,7 @@ export default function Dashboard() {
     batchQueryTimerRef.current = setInterval(fetchBatchedData, 1000)
 
     // Set up metadata refresh every minute
-    metadataTimerRef.current = setInterval(fetchMetadataInfo, 60000)
+    metadataTimerRef.current = setInterval(fetchMetadataInfo, 30000)
 
     // Cleanup on unmount
     return () => {
@@ -353,11 +366,11 @@ export default function Dashboard() {
 
       {/* Main Dashboard Content */}
       <Tabs defaultValue="stats" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
+        <TabsList className="grid w-full grid-cols-4 h-14 text-xl">
           <TabsTrigger value="stats">All Sensors</TabsTrigger>
           <TabsTrigger value="rawdata">Raw Data</TabsTrigger>
           <TabsTrigger value="schematised">Schematised Data</TabsTrigger>
-          <TabsTrigger value="charts">Charts</TabsTrigger>
+          {/* <TabsTrigger value="charts">Charts</TabsTrigger> */}
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
           {/* <TabsTrigger value="sensors">Sensors</TabsTrigger> */}
         </TabsList>

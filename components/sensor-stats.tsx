@@ -1,10 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Table } from "lucide-react"
+import { BarChart3, Table, ScatterChart } from "lucide-react"
 import {
   LineChart,
   Line,
@@ -13,6 +13,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts"
+import Plotly from "plotly.js-dist-min"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const METRICS = [
   { key: "temperature", label: "Temperature", unit: "°F" },
@@ -31,9 +33,15 @@ const metricColors: Record<string, string> = {
 }
 
 const TIME_WINDOW_MS = 20 * 60 * 1000
+const SCATTER_WINDOW_MS = 2 * 60 * 1000
 
 export default function SensorStats({ data }: { data: SensorReading[] }) {
-  const [view, setView] = useState<"data" | "charts">("data")
+  const [view, setView] = useState<"data" | "charts" | "scatter">("data")
+  const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
+  const [hideAnomalies, setHideAnomalies] = useState<boolean>(() => {
+    return sessionStorage.getItem("hideAnomalies") === "false"
+  })
+  const chartRef = useRef<HTMLDivElement | null>(null)
 
   const now = Date.now()
   const start = now - TIME_WINDOW_MS
@@ -43,7 +51,6 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
     data.forEach((reading) => {
       const ts = new Date(reading.timestamp).getTime()
       if (ts < start || ts > now) return
-
       if (!groups[reading.city]) groups[reading.city] = []
       groups[reading.city].push(reading)
     })
@@ -111,27 +118,139 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
     return Object.keys(averagedByCity).sort((a, b) => a.localeCompare(b))
   }, [averagedByCity])
 
+  const scatterData = useMemo(() => {
+    const cutoff = Date.now() - SCATTER_WINDOW_MS
+    return data.filter((d) => new Date(d.timestamp).getTime() >= cutoff)
+  }, [data])
+
+  const groupedForScatter = useMemo(() => {
+    const groups: Record<string, SensorReading[]> = {}
+    for (const d of scatterData) {
+      if (!groups[d.city]) groups[d.city] = []
+      groups[d.city].push(d)
+    }
+    return groups
+  }, [scatterData])
+
+  const cityColors: Record<string, string> = {
+    Amsterdam: "#FFFF00",
+    Beijing: "#00FF00",
+    Berlin: "#36A2EB",
+    London: "#FFCE56",
+    Cairo: "#FF0000",
+    "New York": "#4BC0C0",
+    Tokyo: "#9966FF",
+    Paris: "#FF9F40",
+    Sydney: "#32CD32",
+    Dubai: "#FF5733",
+    "San Francisco": "#8A2BE2",
+    Singapore: "#00FFFF",
+    Default: "#FF00FF",
+  }
+
+  useEffect(() => {
+    if (view !== "scatter" || !chartRef.current) return
+
+    const storedColors = JSON.parse(localStorage.getItem("cityColors") || "{}")
+    Object.assign(cityColors, storedColors)
+
+    const generateCityColor = (city: string) => {
+      const rgb = `rgb(${Math.random() * 255 | 0}, ${Math.random() * 255 | 0}, ${Math.random() * 255 | 0})`
+      cityColors[city] = rgb
+      localStorage.setItem("cityColors", JSON.stringify(cityColors))
+      return rgb
+    }
+
+    const traces = Object.entries(groupedForScatter).map(([city, items]) => {
+      const color = cityColors[city] || generateCityColor(city)
+      const filtered = hideAnomalies ? items.filter((d) => !d.anomalyFlag) : items
+
+      return {
+        type: "scattergl",
+        mode: "markers",
+        name: city,
+        x: filtered.map((d) => new Date(d.timestamp)),
+        y: filtered.map((d) => d[metric]),
+        text: filtered.map((d) => `
+          <b>${d.city}</b><br><br>
+          Sensor: ${d.sensorId}<br>
+          Time: ${new Date(d.timestamp).toLocaleString()}<br>
+          Temp: ${d.temperature?.toFixed(2) ?? "N/A"} °F<br>
+          Humidity: ${d.humidity?.toFixed(2) ?? "N/A"}%<br>
+          Pressure: ${d.pressure?.toFixed(2) ?? "N/A"} hPa<br>
+          Model: ${d.model ?? "Unknown"}<br>
+          Firmware: ${d.firmwareVersion ?? "Unknown"}
+        `),
+        marker: {
+          color,
+          size: filtered.map((d) => d.anomalyFlag ? 16 : 3),
+          line: { width: 0 }
+        },
+        hoverinfo: "text",
+        hoverlabel: {
+          bgcolor: "#fff",
+          bordercolor: color,
+          font: { color: "#000" },
+          padding: 0,
+          align: "left"
+        },
+        showlegend: true,
+      }
+    })
+
+    Plotly.react(chartRef.current, traces, {
+      title: {
+        text: `Live Sensor Feed: ${metric}`,
+        font: { color: "#ffffff", size: 20 },
+      },
+      xaxis: {
+        title: "Timestamp",
+        type: "date",
+        color: "#ffffff",
+        gridcolor: "#444",
+        linecolor: "#444",
+        zerolinecolor: "#444",
+      },
+      yaxis: {
+        title: metric,
+        color: "#ffffff",
+        gridcolor: "#444",
+        linecolor: "#444",
+        zerolinecolor: "#444",
+      },
+      plot_bgcolor: "transparent",
+      paper_bgcolor: "transparent",
+      font: { color: "#ffffff" },
+      hovermode: "closest",
+      legend: {
+        orientation: "h",
+        x: 0.5,
+        xanchor: "center",
+        y: -0.3,
+      },
+      margin: { t: 60, b: 100, l: 60, r: 30 },
+    }, { responsive: true, displayModeBar: false })
+
+  }, [view, metric, groupedForScatter, hideAnomalies])
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl">All Sensors</h2>
         <div className="space-x-2">
-          <Button
-            variant={view === "data" ? "default" : "outline"}
-            onClick={() => setView("data")}
-          >
+          <Button variant={view === "data" ? "default" : "outline"} onClick={() => setView("data")}>
             <Table className="w-5 h-5" />
           </Button>
-          <Button
-            variant={view === "charts" ? "default" : "outline"}
-            onClick={() => setView("charts")}
-          >
+          <Button variant={view === "charts" ? "default" : "outline"} onClick={() => setView("charts")}>
             <BarChart3 className="w-5 h-5" />
+          </Button>
+          <Button variant={view === "scatter" ? "default" : "outline"} onClick={() => setView("scatter")}>
+            <ScatterChart className="w-5 h-5" />
           </Button>
         </div>
       </div>
 
-      {view === "data" ? (
+      {view === "data" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cityStats.map((stat) => (
             <Card key={stat.city} className="bg-gray-900 border-gray-800">
@@ -161,7 +280,9 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
             </Card>
           ))}
         </div>
-      ) : (
+      )}
+
+      {view === "charts" && (
         <div>
           {sortedCities.map((city) => {
             const series = averagedByCity[city]
@@ -203,6 +324,38 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
             )
           })}
         </div>
+      )}
+
+      {view === "scatter" && (
+        <Card className="bg-gray-900 border-gray-800 mt-6">
+          <CardHeader>
+            <CardTitle
+              className="text-3xl cursor-pointer"
+              onClick={() => {
+                setHideAnomalies((prev) => {
+                  const next = !prev
+                  sessionStorage.setItem("hideAnomalies", String(next))
+                  return next
+                })
+              }}
+            >
+              Sensor Data Scatter Plot {hideAnomalies && "(Anomalies Hidden)"}
+            </CardTitle>
+            <Tabs value={metric} onValueChange={(val) => setMetric(val as any)} className="w-full">
+              <TabsList className="grid grid-cols-3 w-full text-xl mt-2 h-12">
+                <TabsTrigger value="temperature">Temperature</TabsTrigger>
+                <TabsTrigger value="humidity">Humidity</TabsTrigger>
+                <TabsTrigger value="pressure">Pressure</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent>
+            <p className="text-right text-sm text-gray-400 mb-2">
+              Plotting {scatterData.length.toLocaleString()} points
+            </p>
+            <div ref={chartRef} className="w-full h-[600px]" />
+          </CardContent>
+        </Card>
       )}
     </div>
   )
