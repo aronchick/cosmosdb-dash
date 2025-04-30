@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { BarChart3, Table } from "lucide-react"
 import {
   LineChart,
   Line,
@@ -113,19 +114,19 @@ export default function SensorStats({ data }: { data: SensorReading[] }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl">Statistics by City</h2>
+        <h2 className="text-3xl">All Sensors</h2>
         <div className="space-x-2">
           <Button
             variant={view === "data" ? "default" : "outline"}
             onClick={() => setView("data")}
           >
-            Data
+            <Table className="w-5 h-5" />
           </Button>
           <Button
             variant={view === "charts" ? "default" : "outline"}
             onClick={() => setView("charts")}
           >
-            Charts
+            <BarChart3 className="w-5 h-5" />
           </Button>
         </div>
       </div>

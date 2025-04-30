@@ -351,7 +351,7 @@ export default function Dashboard() {
       />
 
       {/* Main Dashboard Content */}
-      <Tabs defaultValue="charts" className="w-full">
+      <Tabs defaultValue="stats" className="w-full">
         <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="stats">All Sensors</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
