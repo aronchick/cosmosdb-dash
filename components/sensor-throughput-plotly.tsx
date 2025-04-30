@@ -6,18 +6,20 @@ import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const TWO_MINUTES_MS = 2 * 60 * 1000
+const MIN_BUCKET_AGE_MS = 7 * 1000 // 7 seconds buffer to avoid plotting incomplete buckets
 
 export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
   const chartRef = useRef<HTMLDivElement | null>(null)
 
   const now = Date.now()
-  const cutoff = now - TWO_MINUTES_MS
+  const windowStart = now - TWO_MINUTES_MS
+  const windowEnd = now - MIN_BUCKET_AGE_MS
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
-      const ts = new Date(reading.timestamp).getTime()
-      return ts >= cutoff && ts <= now
+      const ts = Date.parse(reading.timestamp)
+      return ts >= windowStart && ts <= windowEnd
     })
   }, [data])
 
@@ -41,23 +43,25 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     const buckets: Record<string, SensorReading[]> = {}
 
     readings.forEach((entry) => {
-      const time = new Date(entry.timestamp)
-      const timeKey = Math.floor(time.getTime() / 1000).toString()
-      if (!buckets[timeKey]) buckets[timeKey] = []
-      buckets[timeKey].push(entry)
+      const timeMs = Date.parse(entry.timestamp)
+      const bucketTime = Math.floor(timeMs / 1000)
+      const key = bucketTime.toString()
+      if (!buckets[key]) buckets[key] = []
+      buckets[key].push(entry)
     })
 
-    const timestamps = Object.keys(buckets).sort()
+    const timestamps = Object.keys(buckets)
+      .map(Number)
+      .filter((ts) => ts * 1000 <= windowEnd)
+      .sort((a, b) => a - b)
 
-    return timestamps.map((timestamp) => {
-      const time = parseInt(timestamp)
+    return timestamps.map((ts) => {
+      const bucket = buckets[ts.toString()]
       const kbps =
-        buckets[timestamp].reduce((sum, r) => sum + calculateByteSize(r), 0) /
-        1024
-
-      const divided = divideAfter && time >= divideAfter
+        bucket.reduce((sum, r) => sum + calculateByteSize(r), 0) / 1024
+      const divided = divideAfter && ts >= divideAfter
       return {
-        timestamp,
+        timestamp: ts,
         kbps: divided ? kbps / 60 : kbps,
       }
     })
@@ -81,20 +85,14 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     ? totalKb / 1000 / 60
     : totalKb / 1000
 
-  // Helper to calculate average kbps for a time window
   const calculateAverageKbps = (readings: SensorReading[], windowMs: number) => {
-    const now = Date.now()
-    const cutoff = now - windowMs
-
+    const cutoff = Date.now() - windowMs
     const selected = readings.filter((r) => {
-      const ts = new Date(r.timestamp).getTime()
-      return ts >= cutoff && ts <= now
+      const ts = Date.parse(r.timestamp)
+      return ts >= cutoff && ts <= Date.now()
     })
-
     const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
-    const seconds = windowMs / 1000
-
-    return seconds > 0 ? totalKb / seconds : 0
+    return windowMs > 0 ? totalKb / (windowMs / 1000) : 0
   }
 
   useEffect(() => {
@@ -106,12 +104,12 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       type: "scatter",
       mode: "lines",
       name: "Total KB/s",
-      x: throughputSeries.map((p) => new Date(parseInt(p.timestamp) * 1000)),
+      x: throughputSeries.map((p) => new Date(p.timestamp * 1000)),
       y: throughputSeries.map((p) => p.kbps),
       line: {
         width: 2,
         shape: "spline",
-        smoothing: 1.3,
+        smoothing: 0.1,
         color: "#4FD1C5",
       },
     }
@@ -127,7 +125,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         xaxis: {
           title: "Time",
           type: "date",
-          range: [new Date(now - TWO_MINUTES_MS), new Date(now)],
+          range: [new Date(windowStart), new Date(windowEnd)],
           showgrid: false,
           tickformat: "%H:%M:%S",
           color: "#ffffff",
@@ -178,7 +176,6 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
         </CardContent>
       </Card>
 
-      {/* City Throughput Table */}
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
           <CardTitle className="text-2xl">City KB/s Averages</CardTitle>
@@ -192,7 +189,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                 <th className="p-2">Avg KB/s (60s)</th>
                 <th className="p-2">Avg KB/s (5min)</th>
                 <th className="p-2">Avg KB/s (30min)</th>
-                <th className="p-2">Total MB (30min)</th> {/* new column */}
+                <th className="p-2">Total MB (30min)</th>
               </tr>
             </thead>
             <tbody>
@@ -203,14 +200,13 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                 const avg30min = calculateAverageKbps(readings, 30 * 60_000)
 
                 const totalMb30min = (() => {
-                  const now = Date.now()
-                  const cutoff = now - 30 * 60_000
+                  const cutoff = Date.now() - 30 * 60_000
                   const selected = readings.filter((r) => {
-                    const ts = new Date(r.timestamp).getTime()
-                    return ts >= cutoff && ts <= now
+                    const ts = Date.parse(r.timestamp)
+                    return ts >= cutoff && ts <= Date.now()
                   })
                   const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
-                  return totalKb / 1000 // convert to MB
+                  return totalKb / 1000
                 })()
 
                 return (
@@ -220,7 +216,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                     <td className="p-2">{avg60s.toFixed(2)}</td>
                     <td className="p-2">{avg5min.toFixed(2)}</td>
                     <td className="p-2">{avg30min.toFixed(2)}</td>
-                    <td className="p-2">{totalMb30min.toFixed(2)} MB</td> {/* new cell */}
+                    <td className="p-2">{totalMb30min.toFixed(2)} MB</td>
                   </tr>
                 )
               })}
