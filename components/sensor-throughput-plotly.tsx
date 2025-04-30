@@ -106,7 +106,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     const throughputSeries = generateThroughput(filteredReadings, divisionToggleTime)
 
     const trace = {
-      type: "scatter",
+      type: "scattergl",
       mode: "lines",
       name: "Total KB/s",
       x: throughputSeries.map((p) => new Date(p.timestamp * 1000)),
