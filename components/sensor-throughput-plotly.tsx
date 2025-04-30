@@ -156,13 +156,13 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   return (
     <div>
       <h2
-        className="text-3xl mb-6 cursor-pointer hover:text-blue-400"
+        className="text-3xl mb-6"
         onClick={handleToggleDivision}
         title="Click to toggle divide-by-60 mode"
       >
         Sensor Throughput
         <br />
-        <span className="text-2xl font-bold ml-2">
+        <span className="text-2xl font-bold">
           ({adjustedMb.toFixed(2)} MB Generated)
         </span>
       </h2>
