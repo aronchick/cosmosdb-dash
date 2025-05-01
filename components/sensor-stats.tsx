@@ -329,17 +329,21 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
       {view === "scatter" && (
         <Card className="bg-gray-900 border-gray-800 mt-6">
           <CardHeader>
-            <CardTitle
-              className="text-3xl cursor-pointer"
-              onClick={() => {
-                setHideAnomalies((prev) => {
-                  const next = !prev
-                  sessionStorage.setItem("hideAnomalies", String(next))
-                  return next
-                })
-              }}
-            >
-              Sensor Data Scatter Plot {hideAnomalies && "(Anomalies Hidden)"}
+            <CardTitle className="text-3xl w-full flex items-center justify-between">
+              <span>Sensor Data Scatter Plot</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground rounded-md opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
+                onClick={() => {
+                  setHideAnomalies((prev) => {
+                    const next = !prev
+                    sessionStorage.setItem("hideAnomalies", String(next))
+                    return next
+                  })
+                }}
+                title="Toggle anomaly visibility"
+              />
             </CardTitle>
             <Tabs value={metric} onValueChange={(val) => setMetric(val as any)} className="w-full">
               <TabsList className="grid grid-cols-3 w-full text-xl mt-2 h-12">
@@ -357,6 +361,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
           </CardContent>
         </Card>
       )}
+
     </div>
   )
 }
