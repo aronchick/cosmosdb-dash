@@ -38,8 +38,9 @@ const SCATTER_WINDOW_MS = 2 * 60 * 1000
 export default function SensorStats({ data, activeView }: { data: SensorReading[], activeView: any }) {
   const [view, setView] = useState<"data" | "charts" | "scatter">("data")
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
-  const [hideAnomalies, setHideAnomalies] = useState<boolean>(() => {
-    return sessionStorage.getItem("hideAnomalies") === "false"
+  const [hideAnomaliesAfter, setHideAnomaliesAfter] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem("hideAnomaliesAfter")
+    return saved ? parseInt(saved) : null
   })
   const chartRef = useRef<HTMLDivElement | null>(null)
 
@@ -132,6 +133,13 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
     return groups
   }, [scatterData])
 
+  function capitalise(str: string){
+
+    const a = str;
+    return `${a.slice(0,1).toUpperCase()}${a.slice(1, str.length)}`;
+
+  }
+
   const cityColors: Record<string, string> = {
     Amsterdam: "#FFFF00",
     Beijing: "#00FF00",
@@ -163,7 +171,11 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
 
     const traces: any = Object.entries(groupedForScatter).map(([city, items]) => {
       const color = cityColors[city] || generateCityColor(city)
-      const filtered = hideAnomalies ? items.filter((d) => !d.anomalyFlag) : items
+      const filtered = items.filter((d) => {
+        const ts = new Date(d.timestamp).getTime()
+        if (!d.anomalyFlag) return true
+        return hideAnomaliesAfter === null || ts < hideAnomaliesAfter
+      })
 
       return {
         type: "scattergl",
@@ -179,7 +191,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
           Humidity: ${d.humidity?.toFixed(2) ?? "N/A"}%<br>
           Pressure: ${d.pressure?.toFixed(2) ?? "N/A"} hPa<br>
           Model: ${d.model ?? "Unknown"}<br>
-          Firmware: ${d.firmwareVersion ?? "Unknown"}
+          Firmware: ${hideAnomaliesAfter ? "2.0" : (d.firmwareVersion ?? "Unknown")}
         `),
         marker: {
           color,
@@ -200,7 +212,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
 
     Plotly.react(chartRef.current, traces, {
       title: {
-        text: `Live Sensor Feed: ${metric}`,
+        text: `Live Sensor Feed: ${capitalise(metric)}`,
         font: { color: "#ffffff", size: 20 },
       },
       xaxis: {
@@ -231,7 +243,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
       margin: { t: 60, b: 100, l: 60, r: 30 },
     }, { responsive: true, displayModeBar: false })
 
-  }, [view, metric, groupedForScatter, hideAnomalies])
+  }, [view, metric, groupedForScatter, hideAnomaliesAfter])
 
   return (
     <div>
@@ -336,9 +348,13 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
                 size="sm"
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground rounded-md opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
                 onClick={() => {
-                  setHideAnomalies((prev) => {
-                    const next = !prev
-                    sessionStorage.setItem("hideAnomalies", String(next))
+                  setHideAnomaliesAfter((prev) => {
+                    const next = prev ? null : Date.now()
+                    if (next) {
+                      sessionStorage.setItem("hideAnomaliesAfter", String(next))
+                    } else {
+                      sessionStorage.removeItem("hideAnomaliesAfter")
+                    }
                     return next
                   })
                 }}
