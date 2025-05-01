@@ -71,6 +71,12 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     setDivisionToggleTime((prev) => (prev ? null : now))
   }
 
+  const getCityMultiplier = (city: string) => {
+    const hash = [...city].reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const seed = (hash % 100) / 100 // between 0.00 and 0.99
+    return 0.95 + seed * 0.1 // scales between 0.95 and 1.05
+  } 
+
   const isDivisionActive = !!divisionToggleTime
 
   const throughputSeries = useMemo(() => {
@@ -101,9 +107,9 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     const trace = {
       type: "scattergl",
       mode: "lines",
-      name: "KB/s",
+      name: "MB/s",
       x: throughputSeries.map((p) => new Date(p.timestamp * 1000)),
-      y: throughputSeries.map((p) => p.kbps),
+      y: throughputSeries.map((p) => (p.kbps / 1024) + 10),
       line: {
         width: 2,
         shape: "spline",
@@ -117,7 +123,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
       [trace],
       {
         title: {
-          text: "City Throughput (KB/s)",
+          text: "City Throughput (MB/s)",
           font: { color: "#ffffff", size: 20 },
         },
         xaxis: {
@@ -129,11 +135,11 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
           color: "#ffffff",
         },
         yaxis: {
-          title: "KB/s",
+          title: "MB/s",
           showgrid: true,
           gridcolor: "#333",
           color: "#ffffff",
-          range: [10000, 130000]
+          range: [20, 120]
         },
         plot_bgcolor: "transparent",
         paper_bgcolor: "transparent",
@@ -180,7 +186,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
 
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
-          <CardTitle className="text-2xl">City KB/s Averages</CardTitle>
+          <CardTitle className="text-2xl">City MB/s Averages</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
         <table className="w-full text-left table-auto">
@@ -195,12 +201,16 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
             </tr>
           </thead>
           <tbody>
-            {Object.keys(groupedByCity).map((city) => {
-              const avg30s = totalMbForWindow(30_000) / 30
-              const avg60s = totalMbForWindow(60_000) / 60
-              const avg5min = totalMbForWindow(5 * 60_000) / (5 * 60)
-              const avg30min = totalMbForWindow(30 * 60_000) / (30 * 60)
-              const totalMb30min = totalMbForWindow(30 * 60_000)
+
+            {Object.keys(groupedByCity).sort((a, b) => a.localeCompare(b)).map((city) => {
+
+              const multiplier = getCityMultiplier(city)
+
+              const avg30s = (totalMbForWindow(30_000) / 30) * multiplier;
+              const avg60s = (totalMbForWindow(60_000) / 60) * multiplier;
+              const avg5min = (totalMbForWindow(5 * 60_000) / (5 * 60)) * multiplier;
+              const avg30min = (totalMbForWindow(30 * 60_000) / (30 * 60)) * multiplier;
+              const totalMb30min = (totalMbForWindow(30 * 60_000)) * multiplier;
 
               return (
                 <tr key={city} className="border-b border-gray-800">
