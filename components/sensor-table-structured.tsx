@@ -5,13 +5,11 @@ import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Search } from "lucide-react"
 
 export default function SensorTableStructured({ data, activeView }: { data: SensorReading[], activeView: any }) {
-  
-  if(activeView !== "schematised"){
-    return;
-  }
+  if (activeView !== "schematised") return null
 
   const [searchTerm, setSearchTerm] = useState("")
   const [showRawLatLon, setShowRawLatLon] = useState(true)
@@ -33,12 +31,19 @@ export default function SensorTableStructured({ data, activeView }: { data: Sens
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
-        <CardTitle
-          className="text-3xl flex justify-between items-center text-3xl font-semibold tracking-tight"
-          onClick={() => setShowRawLatLon((prev) => !prev)}
-        >
-          Structured Sensor Data
-        </CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-3xl font-semibold tracking-tight">
+            Structured Sensor Data
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRawLatLon((prev) => !prev)}
+            className="opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
+            title="Toggle Lat/Lon format"
+          />
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-4 gap-4">
           <div className="relative w-full md:w-1/2">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
