@@ -35,6 +35,12 @@ const metricColors: Record<string, string> = {
 const TIME_WINDOW_MS = 20 * 60 * 1000
 const SCATTER_WINDOW_MS = 2 * 60 * 1000
 
+const METRIC_BOUNDS = {
+  "humidity" : [28, 46],
+  "temperature" : [55, 85],
+  "pressure" : [1000, 1250]
+}
+
 export default function SensorStats({ data, activeView }: { data: SensorReading[], activeView: any }) {
   const [view, setView] = useState<"data" | "charts" | "scatter">("data")
   const [metric, setMetric] = useState<"temperature" | "humidity" | "pressure">("temperature")
@@ -210,6 +216,8 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
       }
     })
 
+    console.log("METRIC_BOUNDS[metric]:", METRIC_BOUNDS[metric])
+
     Plotly.react(chartRef.current, traces, {
       title: {
         text: `Live Sensor Feed: ${capitalise(metric)}`,
@@ -229,6 +237,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
         gridcolor: "#444",
         linecolor: "#444",
         zerolinecolor: "#444",
+        range : METRIC_BOUNDS[metric]
       },
       plot_bgcolor: "transparent",
       paper_bgcolor: "transparent",
