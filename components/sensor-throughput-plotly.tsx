@@ -4,17 +4,30 @@ import { useMemo, useState, useEffect, useRef } from "react"
 import Plotly from "plotly.js-dist-min"
 import type { SensorReading } from "@/components/dashboard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 const TWO_MINUTES_MS = 2 * 60 * 1000
-const MIN_BUCKET_AGE_MS = 7 * 1000 // 7 seconds buffer to avoid plotting incomplete buckets
+const MIN_BUCKET_AGE_MS = 7 * 1000
 
-export default function SensorThroughput({ data }: { data: SensorReading[] }) {
+export default function SensorThroughput({ data, activeView }: { data: SensorReading[], activeView: any }) {
+  if (activeView !== "throughput") return null
+
   const [divisionToggleTime, setDivisionToggleTime] = useState<number | null>(null)
   const chartRef = useRef<HTMLDivElement | null>(null)
 
   const now = Date.now()
   const windowStart = now - TWO_MINUTES_MS
   const windowEnd = now - MIN_BUCKET_AGE_MS
+
+  const readingSizeMap = useMemo(() => {
+    const map = new Map<string, number>()
+    data.forEach((reading) => {
+      map.set(reading.id, new Blob([JSON.stringify(reading)]).size)
+    })
+    return map
+  }, [data])
+
+  const getSize = (id: string) => readingSizeMap.get(id) || 0
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
@@ -31,10 +44,6 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     }
     return groups
   }, [filteredReadings])
-
-  const calculateByteSize = (reading: SensorReading) => {
-    return new Blob([JSON.stringify(reading)]).size
-  }
 
   const generateThroughput = (
     readings: SensorReading[],
@@ -57,8 +66,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
     return timestamps.map((ts) => {
       const bucket = buckets[ts.toString()]
-      const kbps =
-        bucket.reduce((sum, r) => sum + calculateByteSize(r), 0) / 1024
+      const kbps = bucket.reduce((sum, r) => sum + getSize(r.id), 0) / 1024
       const divided = divideAfter && ts >= divideAfter
       return {
         timestamp: ts,
@@ -75,15 +83,10 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
   const isDivisionActive = !!divisionToggleTime
 
   const totalKb = useMemo(() => {
-    return filteredReadings.reduce(
-      (sum, r) => sum + calculateByteSize(r) / 1024,
-      0
-    )
+    return filteredReadings.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
   }, [filteredReadings])
 
-  const adjustedMb = isDivisionActive
-    ? totalKb / 1000 / 60
-    : totalKb / 1000
+  const adjustedMb = isDivisionActive ? totalKb / 1000 / 60 : totalKb / 1000
 
   const calculateAverageKbps = (readings: SensorReading[], windowMs: number) => {
     const cutoff = Date.now() - windowMs
@@ -91,7 +94,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       const ts = Date.parse(r.timestamp)
       return ts >= cutoff && ts <= Date.now()
     })
-    const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
+    const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
     return windowMs > 0 ? totalKb / (windowMs / 1000) : 0
   }
 
@@ -101,7 +104,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
     const throughputSeries = generateThroughput(filteredReadings, divisionToggleTime)
 
     const trace = {
-      type: "scatter",
+      type: "scattergl",
       mode: "lines",
       name: "Total KB/s",
       x: throughputSeries.map((p) => new Date(p.timestamp * 1000)),
@@ -155,11 +158,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
 
   return (
     <div>
-      <h2
-        className="text-3xl mb-6"
-        onClick={handleToggleDivision}
-        title="Click to toggle divide-by-60 mode"
-      >
+      <h2 className="text-3xl mb-6">
         Sensor Throughput
         <br />
         <span className="text-2xl font-bold">
@@ -168,8 +167,15 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
       </h2>
 
       <Card className="bg-gray-900 border-gray-800 mb-8">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-2xl">City Throughput (Last 2 minutes)</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleDivision}
+            className="opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
+            title="Toggle divide-by-60 mode"
+          />
         </CardHeader>
         <CardContent>
           <div ref={chartRef} className="w-full h-[500px]" />
@@ -205,7 +211,7 @@ export default function SensorThroughput({ data }: { data: SensorReading[] }) {
                     const ts = Date.parse(r.timestamp)
                     return ts >= cutoff && ts <= Date.now()
                   })
-                  const totalKb = selected.reduce((sum, r) => sum + calculateByteSize(r) / 1024, 0)
+                  const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
                   return totalKb / 1000
                 })()
 

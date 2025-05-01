@@ -39,8 +39,8 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
           <Button
             variant="outline"
             onClick={() => setShowRawOnly((prev) => !prev)}
-            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 opacity-25"
-          >
+            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 opacity-50"
+          > 
             {showRawOnly ? "" : ""}
           </Button>
 

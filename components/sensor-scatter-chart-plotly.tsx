@@ -106,7 +106,7 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
           const firmwareVersion = d.firmwareVersion || "Unknown"
 
           return `
-            <b>${d.city}</b><br>
+            <b>${d.city}</b><br><br>
             Sensor: ${d.sensorId}<br>
             Time: ${new Date(d.timestamp).toLocaleString()}<br>
             Temp: ${temp}<br>
@@ -123,10 +123,10 @@ export default function SensorScatterChart({ data }: { data: SensorReading[] }) 
           line: { width: 0 }
         },
         hoverlabel: {
-          bgcolor: "#000000",
+          bgcolor: "#FFFFFF",
           bordercolor: markerColor,
-          font: { color: "#ffffff" },
-          padding: 20,
+          font: { color: "#000000" },
+          padding: 0,
           align: "left"
         },
         showlegend: true
