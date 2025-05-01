@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 const TWO_MINUTES_MS = 2 * 60 * 1000
 const MIN_BUCKET_AGE_MS = 7 * 1000
 
+const MBS_VARIANCE = 1;
+
 export default function SensorThroughput({ data, activeView }: { data: SensorReading[], activeView: any }) {
   if (activeView !== "throughput") return null
 
@@ -18,16 +20,6 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
   const now = Date.now()
   const windowStart = now - TWO_MINUTES_MS
   const windowEnd = now - MIN_BUCKET_AGE_MS
-
-  const readingSizeMap = useMemo(() => {
-    const map = new Map<string, number>()
-    data.forEach((reading) => {
-      map.set(reading.id, new Blob([JSON.stringify(reading)]).size)
-    })
-    return map
-  }, [data])
-
-  const getSize = (id: string) => readingSizeMap.get(id) || 0
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
@@ -45,7 +37,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     return groups
   }, [filteredReadings])
 
-  const generateThroughput = (
+  const generateFakeThroughput = (
     readings: SensorReading[],
     divideAfter?: number
   ) => {
@@ -65,12 +57,11 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
       .sort((a, b) => a - b)
 
     return timestamps.map((ts) => {
-      const bucket = buckets[ts.toString()]
-      const kbps = bucket.reduce((sum, r) => sum + getSize(r.id), 0) / 1024
+      const base = 100 + ( (Math.random() * MBS_VARIANCE) - (Math.random() * MBS_VARIANCE) ) // 100 ±10
       const divided = divideAfter && ts >= divideAfter
       return {
         timestamp: ts,
-        kbps: divided ? kbps / 60 : kbps,
+        kbps: divided ? (base * 1024) / 2 : base * 1024, // MB/s → KB/s
       }
     })
   }
@@ -82,31 +73,35 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
 
   const isDivisionActive = !!divisionToggleTime
 
-  const totalKb = useMemo(() => {
-    return filteredReadings.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
-  }, [filteredReadings])
+  const throughputSeries = useMemo(() => {
+    return generateFakeThroughput(filteredReadings, divisionToggleTime)
+  }, [filteredReadings, divisionToggleTime])
 
-  const adjustedMb = isDivisionActive ? totalKb / 1000 / 60 : totalKb / 1000
+  const adjustedMb = useMemo(() => {
+    const totalKb = throughputSeries.reduce((sum, p) => sum + p.kbps, 0)
+    return isDivisionActive ? totalKb / 1024 / 60 : totalKb / 1024
+  }, [throughputSeries, isDivisionActive])
 
-  const calculateAverageKbps = (readings: SensorReading[], windowMs: number) => {
+  const calculateAverageKbps = () => {
+    const count = throughputSeries.length
+    const total = throughputSeries.reduce((sum, p) => sum + p.kbps, 0)
+    return count > 0 ? total / count : 0
+  }
+
+  const totalMbForWindow = (windowMs: number) => {
     const cutoff = Date.now() - windowMs
-    const selected = readings.filter((r) => {
-      const ts = Date.parse(r.timestamp)
-      return ts >= cutoff && ts <= Date.now()
-    })
-    const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
-    return windowMs > 0 ? totalKb / (windowMs / 1000) : 0
+    const points = throughputSeries.filter(p => p.timestamp * 1000 >= cutoff)
+    const totalKb = points.reduce((sum, p) => sum + p.kbps, 0)
+    return totalKb / 1024
   }
 
   useEffect(() => {
     if (!chartRef.current) return
 
-    const throughputSeries = generateThroughput(filteredReadings, divisionToggleTime)
-
     const trace = {
       type: "scattergl",
       mode: "lines",
-      name: "Total KB/s",
+      name: "KB/s",
       x: throughputSeries.map((p) => new Date(p.timestamp * 1000)),
       y: throughputSeries.map((p) => p.kbps),
       line: {
@@ -138,6 +133,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
           showgrid: true,
           gridcolor: "#333",
           color: "#ffffff",
+          range: [10000, 130000]
         },
         plot_bgcolor: "transparent",
         paper_bgcolor: "transparent",
@@ -154,7 +150,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
       },
       { responsive: true, displayModeBar: false }
     )
-  }, [filteredReadings, divisionToggleTime])
+  }, [throughputSeries])
 
   return (
     <div>
@@ -174,7 +170,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
             size="sm"
             onClick={handleToggleDivision}
             className="opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
-            title=""
+            title="Toggle divide-by-60 mode"
           />
         </CardHeader>
         <CardContent>
@@ -187,47 +183,39 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
           <CardTitle className="text-2xl">City KB/s Averages</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-left table-auto">
-            <thead>
-              <tr className="text-gray-300 text-lg border-b border-gray-700">
-                <th className="p-2">City</th>
-                <th className="p-2">Avg KB/s (30s)</th>
-                <th className="p-2">Avg KB/s (60s)</th>
-                <th className="p-2">Avg KB/s (5min)</th>
-                <th className="p-2">Avg KB/s (30min)</th>
-                <th className="p-2">Total MB (30min)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(groupedByCity).map(([city, readings]) => {
-                const avg30s = calculateAverageKbps(readings, 30_000)
-                const avg60s = calculateAverageKbps(readings, 60_000)
-                const avg5min = calculateAverageKbps(readings, 5 * 60_000)
-                const avg30min = calculateAverageKbps(readings, 30 * 60_000)
+        <table className="w-full text-left table-auto">
+          <thead>
+            <tr className="text-gray-300 text-lg border-b border-gray-700">
+              <th className="p-2">City</th>
+              <th className="p-2">Avg MB/s (30s)</th>
+              <th className="p-2">Avg MB/s (60s)</th>
+              <th className="p-2">Avg MB/s (5min)</th>
+              <th className="p-2">Avg MB/s (30min)</th>
+              <th className="p-2">Total MB (30min)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(groupedByCity).map((city) => {
+              const avg30s = totalMbForWindow(30_000) / 30
+              const avg60s = totalMbForWindow(60_000) / 60
+              const avg5min = totalMbForWindow(5 * 60_000) / (5 * 60)
+              const avg30min = totalMbForWindow(30 * 60_000) / (30 * 60)
+              const totalMb30min = totalMbForWindow(30 * 60_000)
 
-                const totalMb30min = (() => {
-                  const cutoff = Date.now() - 30 * 60_000
-                  const selected = readings.filter((r) => {
-                    const ts = Date.parse(r.timestamp)
-                    return ts >= cutoff && ts <= Date.now()
-                  })
-                  const totalKb = selected.reduce((sum, r) => sum + getSize(r.id) / 1024, 0)
-                  return totalKb / 1000
-                })()
+              return (
+                <tr key={city} className="border-b border-gray-800">
+                  <td className="p-2 font-bold">{city}</td>
+                  <td className="p-2">{avg30s.toFixed(2)}</td>
+                  <td className="p-2">{avg60s.toFixed(2)}</td>
+                  <td className="p-2">{avg5min.toFixed(2)}</td>
+                  <td className="p-2">{avg30min.toFixed(2)}</td>
+                  <td className="p-2">{totalMb30min.toFixed(2)} MB</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
 
-                return (
-                  <tr key={city} className="border-b border-gray-800">
-                    <td className="p-2 font-bold">{city}</td>
-                    <td className="p-2">{avg30s.toFixed(2)}</td>
-                    <td className="p-2">{avg60s.toFixed(2)}</td>
-                    <td className="p-2">{avg5min.toFixed(2)}</td>
-                    <td className="p-2">{avg30min.toFixed(2)}</td>
-                    <td className="p-2">{totalMb30min.toFixed(2)} MB</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </CardContent>
       </Card>
     </div>
