@@ -174,7 +174,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
             size="sm"
             onClick={handleToggleDivision}
             className="opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
-            title="Toggle divide-by-60 mode"
+            title=""
           />
         </CardHeader>
         <CardContent>

@@ -40,7 +40,7 @@ export default function SensorTableStructured({ data, activeView }: { data: Sens
             size="sm"
             onClick={() => setShowRawLatLon((prev) => !prev)}
             className="opacity-50 h-8 w-8 px-2 py-1 bg-gray-800 border-gray-700 hover:bg-gray-700"
-            title="Toggle Lat/Lon format"
+            title=""
           />
         </div>
 

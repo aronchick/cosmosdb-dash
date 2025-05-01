@@ -342,7 +342,7 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
                     return next
                   })
                 }}
-                title="Toggle anomaly visibility"
+                title=""
               />
             </CardTitle>
             <Tabs value={metric} onValueChange={(val) => setMetric(val as any)} className="w-full">
