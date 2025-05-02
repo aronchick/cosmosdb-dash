@@ -79,13 +79,13 @@ export default function SensorTableStructured({ data, activeView }: { data: Sens
                     <TableCell className="text-lg font-medium">{reading.sensorId}</TableCell>
                     <TableCell className="text-lg">{new Date(reading.timestamp).toLocaleString()}</TableCell>
                     <TableCell className="text-lg">{reading.city}</TableCell>
-                    <TableCell className="text-lg">{reading.temperature.toFixed(2)}°F</TableCell>
-                    <TableCell className="text-lg">{reading.humidity.toFixed(2)}%</TableCell>
-                    <TableCell className="text-lg">{reading.pressure.toFixed(2)}</TableCell>
+                    <TableCell className="text-lg">{reading.temperature?.toFixed(2)}°F</TableCell>
+                    <TableCell className="text-lg">{reading.humidity?.toFixed(2)}%</TableCell>
+                    <TableCell className="text-lg">{reading.pressure?.toFixed(2)}</TableCell>
                     <TableCell className="text-lg">
                       {showRawLatLon
                         ? `${reading.lat}, ${reading.long}`
-                        : `${parseFloat(reading.lat).toFixed(2)}, ${parseFloat(reading.long).toFixed(2)}`}
+                        : `${parseFloat(reading.lat)?.toFixed(2)}, ${parseFloat(reading.long)?.toFixed(2)}`}
                     </TableCell>
                   </TableRow>
                 ))

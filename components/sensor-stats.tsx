@@ -36,7 +36,7 @@ const TIME_WINDOW_MS = 20 * 60 * 1000
 const SCATTER_WINDOW_MS = 2 * 60 * 1000
 
 const METRIC_BOUNDS = {
-  "humidity" : [28, 46],
+  "humidity" : [1, 5],
   "temperature" : [55, 85],
   "pressure" : [1000, 1250]
 }
@@ -127,7 +127,10 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
 
   const scatterData = useMemo(() => {
     const cutoff = Date.now() - SCATTER_WINDOW_MS
-    return data.filter((d) => new Date(d.timestamp).getTime() >= cutoff)
+    return data.filter((d) => {
+      const ts = new Date(d.timestamp + "Z").getTime()
+      return ts >= cutoff
+    })
   }, [data])
 
   const groupedForScatter = useMemo(() => {
