@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button"
 
 const TWO_MINUTES_MS = 2 * 60 * 1000
 const MIN_BUCKET_AGE_MS = 7 * 1000
+const MBS_VARIANCE = 1
 
-const MBS_VARIANCE = 1;
+function parseTimestampToMs(timestamp: string): number {
+  const hasTimezone = timestamp.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(timestamp)
+  return new Date(hasTimezone ? timestamp : `${timestamp}Z`).getTime()
+}
 
 export default function SensorThroughput({ data, activeView }: { data: SensorReading[], activeView: any }) {
   if (activeView !== "throughput") return null
@@ -23,7 +27,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
 
   const filteredReadings = useMemo(() => {
     return data.filter((reading) => {
-      const ts = Date.parse(reading.timestamp)
+      const ts = parseTimestampToMs(reading.timestamp)
       return ts >= windowStart && ts <= windowEnd
     })
   }, [data])
@@ -31,7 +35,9 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
   const groupedByCity = useMemo(() => {
     const groups: Record<string, SensorReading[]> = {}
     for (const reading of filteredReadings) {
-      if (!groups[reading.city]) groups[reading.city] = []
+      if (!groups[reading.city]) {
+        groups[reading.city] = []
+      }
       groups[reading.city].push(reading)
     }
     return groups
@@ -43,13 +49,15 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
   ) => {
     const buckets: Record<string, SensorReading[]> = {}
 
-    readings.forEach((entry) => {
-      const timeMs = Date.parse(entry.timestamp)
+    for (const entry of readings) {
+      const timeMs = parseTimestampToMs(entry.timestamp)
       const bucketTime = Math.floor(timeMs / 1000)
       const key = bucketTime.toString()
-      if (!buckets[key]) buckets[key] = []
+      if (!buckets[key]) {
+        buckets[key] = []
+      }
       buckets[key].push(entry)
-    })
+    }
 
     const timestamps = Object.keys(buckets)
       .map(Number)
@@ -57,11 +65,11 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
       .sort((a, b) => a - b)
 
     return timestamps.map((ts) => {
-      const base = 100 + ( (Math.random() * MBS_VARIANCE) - (Math.random() * MBS_VARIANCE) ) // 100 ±10
+      const base = 100 + (Math.random() * MBS_VARIANCE - Math.random() * MBS_VARIANCE)
       const divided = divideAfter && ts >= divideAfter
       return {
         timestamp: ts,
-        kbps: divided ? (base * 1024) / 2 : base * 1024, // MB/s → KB/s
+        kbps: divided ? (base * 1024) / 2 : base * 1024,
       }
     })
   }
@@ -73,11 +81,11 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
 
   const getCityMultiplier = (city: string) => {
     const hash = [...city].reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const seed = (hash % 100) / 100 // between 0.00 and 0.99
-    return 0.95 + seed * 0.1 // scales between 0.95 and 1.05
-  } 
+    const seed = (hash % 100) / 100
+    return 0.95 + seed * 0.1
+  }
 
-  const isDivisionActive = !!divisionToggleTime
+  const isDivisionActive = divisionToggleTime !== null
 
   const throughputSeries = useMemo(() => {
     return generateFakeThroughput(filteredReadings, divisionToggleTime)
@@ -88,15 +96,9 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
     return isDivisionActive ? totalKb / 1024 / 60 : totalKb / 1024
   }, [throughputSeries, isDivisionActive])
 
-  const calculateAverageKbps = () => {
-    const count = throughputSeries.length
-    const total = throughputSeries.reduce((sum, p) => sum + p.kbps, 0)
-    return count > 0 ? total / count : 0
-  }
-
   const totalMbForWindow = (windowMs: number) => {
     const cutoff = Date.now() - windowMs
-    const points = throughputSeries.filter(p => p.timestamp * 1000 >= cutoff)
+    const points = throughputSeries.filter((p) => p.timestamp * 1000 >= cutoff)
     const totalKb = points.reduce((sum, p) => sum + p.kbps, 0)
     return totalKb / 1024
   }
@@ -139,7 +141,7 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
           showgrid: true,
           gridcolor: "#333",
           color: "#ffffff",
-          range: [20, 120]
+          range: [20, 120],
         },
         plot_bgcolor: "transparent",
         paper_bgcolor: "transparent",
@@ -189,43 +191,40 @@ export default function SensorThroughput({ data, activeView }: { data: SensorRea
           <CardTitle className="text-2xl">City MB/s Averages</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-        <table className="w-full text-left table-auto">
-          <thead>
-            <tr className="text-gray-300 text-lg border-b border-gray-700">
-              <th className="p-2">City</th>
-              <th className="p-2">Avg MB/s (30s)</th>
-              <th className="p-2">Avg MB/s (60s)</th>
-              <th className="p-2">Avg MB/s (5min)</th>
-              <th className="p-2">Avg MB/s (30min)</th>
-              <th className="p-2">Total MB (30min)</th>
-            </tr>
-          </thead>
-          <tbody>
+          <table className="w-full text-left table-auto">
+            <thead>
+              <tr className="text-gray-300 text-lg border-b border-gray-700">
+                <th className="p-2">City</th>
+                <th className="p-2">Avg MB/s (30s)</th>
+                <th className="p-2">Avg MB/s (60s)</th>
+                <th className="p-2">Avg MB/s (5min)</th>
+                <th className="p-2">Avg MB/s (30min)</th>
+                <th className="p-2">Total MB (30min)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(groupedByCity).sort((a, b) => a.localeCompare(b)).map((city) => {
+                const multiplier = getCityMultiplier(city)
 
-            {Object.keys(groupedByCity).sort((a, b) => a.localeCompare(b)).map((city) => {
+                const avg30s = (totalMbForWindow(30_000) / 30) * multiplier
+                const avg60s = (totalMbForWindow(60_000) / 60) * multiplier
+                const avg5min = (totalMbForWindow(5 * 60_000) / (5 * 60)) * multiplier
+                const avg30min = (totalMbForWindow(30 * 60_000) / (30 * 60)) * multiplier
+                const totalMb30min = (totalMbForWindow(30 * 60_000)) * multiplier
 
-              const multiplier = getCityMultiplier(city)
-
-              const avg30s = (totalMbForWindow(30_000) / 30) * multiplier;
-              const avg60s = (totalMbForWindow(60_000) / 60) * multiplier;
-              const avg5min = (totalMbForWindow(5 * 60_000) / (5 * 60)) * multiplier;
-              const avg30min = (totalMbForWindow(30 * 60_000) / (30 * 60)) * multiplier;
-              const totalMb30min = (totalMbForWindow(30 * 60_000)) * multiplier;
-
-              return (
-                <tr key={city} className="border-b border-gray-800">
-                  <td className="p-2 font-bold">{city}</td>
-                  <td className="p-2">{avg30s.toFixed(2)}</td>
-                  <td className="p-2">{avg60s.toFixed(2)}</td>
-                  <td className="p-2">{avg5min.toFixed(2)}</td>
-                  <td className="p-2">{avg30min.toFixed(2)}</td>
-                  <td className="p-2">{totalMb30min.toFixed(2)} MB</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-
+                return (
+                  <tr key={city} className="border-b border-gray-800">
+                    <td className="p-2 font-bold">{city}</td>
+                    <td className="p-2">{avg30s.toFixed(2)}</td>
+                    <td className="p-2">{avg60s.toFixed(2)}</td>
+                    <td className="p-2">{avg5min.toFixed(2)}</td>
+                    <td className="p-2">{avg30min.toFixed(2)}</td>
+                    <td className="p-2">{totalMb30min.toFixed(2)} MB</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
     </div>
