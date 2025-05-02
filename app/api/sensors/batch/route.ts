@@ -61,15 +61,23 @@ export async function GET(request: Request) {
     }
 
     // Build a single query that gets all data since the earliest timestamp
+    // Calculate one hour ago from now
+    const mins = 10
+    const allotedTimeWindow = new Date(Date.now() - mins * 60 * 1000).toISOString()
+
     const querySpec = {
-      query: "SELECT * FROM c WHERE c.timestamp > @timestamp ORDER BY c.timestamp DESC",
+      query: `
+        SELECT * FROM c 
+        WHERE c.timestamp > @earliestTimestamp 
+          AND c.timestamp > @allotedTimeWindow
+        ORDER BY c.timestamp DESC
+      `,
       parameters: [
-        {
-          name: "@timestamp",
-          value: earliestTimestamp,
-        },
+        { name: "@earliestTimestamp", value: earliestTimestamp },
+        { name: "@allotedTimeWindow", value: allotedTimeWindow },
       ],
     }
+
 
     // Execute the query
     const { resources: results } = await container.items.query(querySpec).fetchAll()

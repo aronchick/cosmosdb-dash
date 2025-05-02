@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { fetchBatchedSensorData, clearAllData, fetchMetadata } from "@/lib/data-service"
 import SensorScatterChart from "@/components/sensor-scatter-chart"
 import SensorStats from "@/components/sensor-stats"
+import SensorThroughput from "@/components/sensor-throughput"
 import SensorTable from "@/components/sensor-table"
 import CitySelector from "@/components/city-selector"
 import CitySensors from "@/components/city-sensors"
@@ -28,14 +29,28 @@ export type SensorReading = {
   id: string
   sensorId: string
   timestamp: string
+  city: string
+  location: string
+  lat: string
+  long: string
+  processingStage: string
   temperature: number
   humidity: number
   pressure: number
-  city: string
-  type: string
+  vibration: number
+  voltage: number
+  status: string
+  firmwareVersion: string
+  model: string
+  manufacturer: string
+  anomalyFlag: boolean
+  anomalyType: string | null
+  rawDataString?: string // optional, since it may or may not be present
 }
 
+
 export default function Dashboard() {
+  const isFetchingRef = useRef(false)
   const [sensorData, setSensorData] = useState<SensorReading[]>([])
   const lastTimestampsRef = useRef<Record<string, string>>({});
   const [lastTimestamps, setLastTimestamps] = useState<Record<string, string>>({})
@@ -88,46 +103,39 @@ export default function Dashboard() {
 
   // Function to fetch batched data for all sensors
   const fetchBatchedData = async () => {
+    if (isFetchingRef.current) {
+      console.log("Fetch in progress — skipping this cycle.")
+      return
+    }
+  
+    isFetchingRef.current = true
     try {
       setIsLoading(true)
       setQueryCount((prev) => prev + 1)
-
+  
       console.log("Executing batched query for all sensors and cities...")
-
-      const result = await fetchBatchedSensorData(lastTimestampsRef.current);
-
-      console.log("Server returned result:", result);
-
+      const result = await fetchBatchedSensorData(lastTimestampsRef.current)
+      console.log("Server returned result:", result)
+  
       if (result.data && result.data.length > 0) {
-        // Update last timestamps for each sensor/city combination
         const newTimestamps: Record<string, string> = { ...lastTimestamps }
-
-        // Group the results by sensor/city
         const groupedResults: Record<string, SensorReading[]> = {}
-
+  
         result.data.forEach((reading: SensorReading) => {
           const key = `${reading.sensorId}:${reading.city}`
-          if (!groupedResults[key]) {
-            groupedResults[key] = []
-          }
+          if (!groupedResults[key]) groupedResults[key] = []
           groupedResults[key].push(reading)
         })
-
-        // Update the last timestamp for each group
+  
         Object.entries(groupedResults).forEach(([key, readings]) => {
-          // Sort by timestamp to ensure we get the latest
           readings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
           newTimestamps[key] = readings[0].timestamp
         })
-
-        console.log("New timestamps being set:", newTimestamps);
-        setLastTimestamps(newTimestamps);
-        lastTimestampsRef.current = newTimestamps;
-
-        // Update data rate
+  
+        setLastTimestamps(newTimestamps)
+        lastTimestampsRef.current = newTimestamps
         readingsCountRef.current += result.data.length
-
-        // Append new data without blocking
+  
         setSensorData((prevData) => {
           const seen = new Set<string>()
           const combined = [...prevData, ...result.data].filter((item) => {
@@ -139,22 +147,22 @@ export default function Dashboard() {
           return combined
         })
       }
-
+  
       setConnectionStatus("connected")
       setError(null)
     } catch (err: any) {
       console.error("Error fetching batched data:", err)
       setConnectionStatus("disconnected")
       setError(`Failed to fetch data: ${err.message || "Unknown error"}. Retrying...`)
-
-      // If we have no data at all, generate some mock data for demo purposes
       if (sensorData.length === 0) {
         generateMockData()
       }
     } finally {
+      isFetchingRef.current = false
       setIsLoading(false)
     }
   }
+  
 
   // Update data rate every second
   useEffect(() => {
@@ -338,11 +346,12 @@ export default function Dashboard() {
 
       {/* Main Dashboard Content */}
       <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14 text-xl">
+        <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="throughput">Throughput</TabsTrigger>
           <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Raw Data</TabsTrigger>
+          <TabsTrigger value="table">Data Points</TabsTrigger>
         </TabsList>
 
         <TabsContent value="charts" className="mt-6">
@@ -353,6 +362,12 @@ export default function Dashboard() {
 
         <TabsContent value="stats" className="mt-6">
           <SensorStats
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+          />
+        </TabsContent>
+
+        <TabsContent value="throughput" className="mt-6">
+          <SensorThroughput
             data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
           />
         </TabsContent>
