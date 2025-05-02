@@ -31,10 +31,19 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
         <CardTitle
-          className="text-3xl"
+          className="text-3xl flex justify-between items-center text-3xl font-semibold tracking-tight"
           onClick={() => setShowRawLatLon((prev) => !prev)}
         >
           Latest Sensor Readings
+
+          <Button
+            variant="outline"
+            onClick={() => setShowRawOnly((prev) => !prev)}
+            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 opacity-50"
+          > 
+            {showRawOnly ? "" : ""}
+          </Button>
+
         </CardTitle>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-4 gap-4">
           <div className="relative w-full md:w-1/2">
@@ -47,13 +56,6 @@ export default function SensorTable({ data }: { data: SensorReading[] }) {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setShowRawOnly((prev) => !prev)}
-            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700"
-          >
-            {showRawOnly ? "Show Schematised" : "Raw Data"}
-          </Button>
         </div>
       </CardHeader>
 

@@ -24,20 +24,19 @@ function getCosmosClient() {
   return { client, database, container }
 }
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const timestampsParam = searchParams.get("timestamps") || "{}"
+    // const timestampsParam = searchParams.get("timestamps") || "{}"
+    const body = await request.json(); // ✅ this parses the JSON body
+    // console.log("Received body:", body);
+
+    const timestampsParam = body.timestamps || {};
 
     console.log("Raw timestampsParam:", timestampsParam);
 
     // Parse the timestamps JSON
-    let lastTimestamps: Record<string, string> = {}
-    try {
-      lastTimestamps = JSON.parse(timestampsParam);
-    } catch (e) {
-      console.error("Error parsing timestamps:", e)
-    }
+    const lastTimestamps: Record<string, string> = body.timestamps || {}
 
     console.log(`Fetching batched data with ${Object.keys(lastTimestamps).length} timestamp entries`)
 

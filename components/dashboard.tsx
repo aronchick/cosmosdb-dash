@@ -1,11 +1,12 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useEffect, useState, useRef } from "react"
 import { fetchBatchedSensorData, clearAllData, fetchMetadata } from "@/lib/data-service"
 import SensorScatterChart from "@/components/sensor-scatter-chart"
-import SensorStats from "@/components/sensor-stats"
 import SensorThroughput from "@/components/sensor-throughput"
-import SensorTable from "@/components/sensor-table"
+import SensorTableRaw from "@/components/sensor-table-raw"
+import SensorTableStructured from "@/components/sensor-table-structured"
 import CitySelector from "@/components/city-selector"
 import CitySensors from "@/components/city-sensors"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertCircle, CheckCircle2, Trash2, Database } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +26,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+
+const SensorStats = dynamic(() => import("@/components/sensor-stats"), {
+  ssr: false,
+})
 
 export type SensorReading = {
   id: string
@@ -69,6 +75,8 @@ export default function Dashboard() {
   const batchQueryTimerRef = useRef<NodeJS.Timeout | null>(null)
   const metadataTimerRef = useRef<NodeJS.Timeout | null>(null)
   const readingsCountRef = useRef(0)
+
+  const [activeView, setActiveView] = useState("stats")
 
   // Function to fetch metadata (unique sensors and cities)
   const fetchMetadataInfo = async () => {
@@ -158,7 +166,16 @@ export default function Dashboard() {
         generateMockData()
       }
     } finally {
-      isFetchingRef.current = false
+      // isFetchingRef.current = false
+
+      (function(isFetchingRef){
+
+        setTimeout(function(){
+          isFetchingRef.current = false;
+        }, 1000);
+
+      })(isFetchingRef);
+
       setIsLoading(false)
     }
   }
@@ -236,6 +253,13 @@ export default function Dashboard() {
 
   // Initial setup and metadata refresh
   useEffect(() => {
+
+    if (Object.keys(lastTimestampsRef.current).length === 0) {
+      const thirtySecondsAgo = new Date(Date.now() - 30_000).toISOString();
+      lastTimestampsRef.current["__default"] = thirtySecondsAgo;
+      console.log("Initialized lastTimestampsRef with:", lastTimestampsRef.current);
+    }
+
     // Initial metadata fetch
     fetchMetadataInfo()
 
@@ -246,7 +270,7 @@ export default function Dashboard() {
     batchQueryTimerRef.current = setInterval(fetchBatchedData, 1000)
 
     // Set up metadata refresh every minute
-    metadataTimerRef.current = setInterval(fetchMetadataInfo, 60000)
+    metadataTimerRef.current = setInterval(fetchMetadataInfo, 30000)
 
     // Cleanup on unmount
     return () => {
@@ -306,7 +330,6 @@ export default function Dashboard() {
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="lg" className="bg-red-600 hover:bg-red-700" disabled={isClearing}>
                   <Trash2 className="mr-2 h-5 w-5" />
-                  Clear All Data
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="bg-gray-900 border-gray-700">
@@ -345,42 +368,37 @@ export default function Dashboard() {
       />
 
       {/* Main Dashboard Content */}
-      <Tabs defaultValue="charts" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-14 text-xl">
-          <TabsTrigger value="charts">Charts</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
+      <Tabs value={activeView} onValueChange={setActiveView} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 h-14 text-xl">
+          <TabsTrigger value="stats">All Sensors</TabsTrigger>
+          <TabsTrigger value="rawdata">Raw Data</TabsTrigger>
+          <TabsTrigger value="schematised">Schematised Data</TabsTrigger>
+          {/* <TabsTrigger value="charts">Charts</TabsTrigger> */}
           <TabsTrigger value="throughput">Throughput</TabsTrigger>
-          <TabsTrigger value="sensors">Sensors</TabsTrigger>
-          <TabsTrigger value="table">Data Points</TabsTrigger>
+          {/* <TabsTrigger value="sensors">Sensors</TabsTrigger> */}
         </TabsList>
-
-        <TabsContent value="charts" className="mt-6">
-          <SensorScatterChart
-            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
-          />
-        </TabsContent>
 
         <TabsContent value="stats" className="mt-6">
           <SensorStats
-            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)} activeView={activeView}
           />
         </TabsContent>
 
         <TabsContent value="throughput" className="mt-6">
           <SensorThroughput
-            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
-          />
-        </TabsContent>
-        
-        <TabsContent value="sensors" className="mt-6">
-          <CitySensors
-            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)} activeView={activeView}
           />
         </TabsContent>
 
-        <TabsContent value="table" className="mt-6">
-          <SensorTable
-            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}
+        <TabsContent value="rawdata" className="mt-6">
+          <SensorTableRaw
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)} activeView={activeView}
+          />
+        </TabsContent>
+
+        <TabsContent value="schematised" className="mt-6">
+          <SensorTableStructured
+            data={sensorData.filter((reading) => selectedCity === "All Cities" || reading.city === selectedCity)}  activeView={activeView}
           />
         </TabsContent>
       </Tabs>

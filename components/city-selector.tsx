@@ -20,7 +20,7 @@ export default function CitySelector({
             <Button
               key={city}
               variant={selectedCity === city ? "default" : "outline"}
-              className={`text-xl py-6 px-8 ${
+              className={`text-sm py-6 px-8 ${
                 selectedCity === city ? "bg-primary hover:bg-primary/90" : "bg-gray-800 hover:bg-gray-700"
               }`}
               onClick={() => onCityChange(city)}
