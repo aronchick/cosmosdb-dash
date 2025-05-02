@@ -56,11 +56,26 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
   const groupedByCity = useMemo(() => {
     const groups: Record<string, SensorReading[]> = {}
     data.forEach((reading) => {
-      const ts = new Date(reading.timestamp).getTime()
-      if (ts < start || ts > now) return
-      if (!groups[reading.city]) groups[reading.city] = []
-      groups[reading.city].push(reading)
-    })
+      let tsString = reading.timestamp;
+    
+      const hasTimezone = tsString.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(tsString);
+      if (!hasTimezone) {
+        tsString += "Z";
+      }
+    
+      const ts = new Date(tsString).getTime();
+    
+      if (ts < start || ts > now) {
+        return;
+      }
+    
+      if (!groups[reading.city]) {
+        groups[reading.city] = [];
+      }
+    
+      groups[reading.city].push(reading);
+    });
+    
     return groups
   }, [data])
 
@@ -90,16 +105,33 @@ export default function SensorStats({ data, activeView }: { data: SensorReading[
     const grouped: Record<string, Record<number, SensorReading[]>> = {}
 
     data.forEach((reading) => {
-      const ts = new Date(reading.timestamp).getTime()
-      if (ts < start || ts > now) return
+      let tsString = reading.timestamp;
+    
+      const hasTimezone = tsString.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(tsString);
+      if (!hasTimezone) {
+        tsString += "Z";
+      }
+    
+      const ts = new Date(tsString).getTime();
+    
+      if (ts < start || ts > now) {
+        return;
+      }
+    
+      const city = reading.city;
+      const secondBucket = Math.floor(ts / 1000);
+    
+      if (!grouped[city]) {
+        grouped[city] = {};
+      }
+    
+      if (!grouped[city][secondBucket]) {
+        grouped[city][secondBucket] = [];
+      }
+    
+      grouped[city][secondBucket].push(reading);
 
-      const city = reading.city
-      const secondBucket = Math.floor(ts / 1000)
-
-      if (!grouped[city]) grouped[city] = {}
-      if (!grouped[city][secondBucket]) grouped[city][secondBucket] = []
-      grouped[city][secondBucket].push(reading)
-    })
+    });    
 
     const citySeries: Record<string, any[]> = {}
     Object.entries(grouped).forEach(([city, buckets]) => {
